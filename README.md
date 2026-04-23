@@ -32,9 +32,10 @@
 │       ├── constants/   # Типы Redux-экшенов
 │       ├── reducers/    # Redux-редьюсеры (product, user, order, cart)
 │       ├── screens/     # Страницы (Home, Cart, Login, Order, Admin и т.д.)
-│       ├── App.js       # Роутинг
-│       ├── store.js     # Redux store (redux-thunk)
-│       └── index.js     # Точка входа
+│       ├── setupProxy.js  # Dev-proxy: /api и /uploads → backend (http-proxy-middleware v0.x)
+│       ├── App.js         # Роутинг
+│       ├── store.js       # Redux store (redux-thunk)
+│       └── index.js       # Точка входа
 ├── uploads/             # Загруженные изображения товаров
 ├── docs/                # Документация
 ├── CLAUDE.md            # Правила для AI-ассистента
@@ -70,11 +71,13 @@ docker-compose up --build
 ```
 
 При первом запуске автоматически:
-- Поднимается MongoDB
+- Поднимается MongoDB (с healthcheck)
 - Запускается сидер и заполняет базу тестовыми данными
 - Стартует backend (порт 5001) и frontend (порт 3000)
 
 Компиляция frontend при первом запуске занимает 1–2 минуты.
+
+> **Почему `stdin_open: true` в compose для frontend?** `webpack-dev-server 3.x` вызывает `process.exit()` при закрытии stdin. Docker Compose запускает контейнеры без TTY — stdin сразу закрывается, процесс молча завершается с кодом 0. `stdin_open: true` держит stdin открытым.
 
 #### Доступ
 
@@ -212,7 +215,7 @@ Node.js v17+ использует OpenSSL 3, несовместимый с webpa
 
 ### Proxy — как устроена маршрутизация API-запросов
 
-Запросы к `/api` и `/uploads` автоматически проксируются с frontend dev-сервера на backend. Настройка находится в `frontend/src/setupProxy.js`:
+Запросы к `/api` и `/uploads` автоматически проксируются с frontend dev-сервера на backend. Настройка в `frontend/src/setupProxy.js`:
 
 ```js
 const target = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5001'
@@ -223,7 +226,16 @@ const target = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5001'
 | Локальный (`npm run dev`) | не задан | `http://127.0.0.1:5001` |
 | Docker Compose | `http://backend:5001` (задан в compose) | Docker-сервис `backend` |
 
-Это позволяет использовать один и тот же код без конфликта между режимами.
+**Важно:** `react-scripts 3.4.3` тянет `http-proxy-middleware` **v0.19.x**. В этой версии нет `createProxyMiddleware` — используется API v0.x:
+
+```js
+// Правильно (v0.x)
+const proxy = require('http-proxy-middleware')
+app.use('/api', proxy({ target, changeOrigin: true }))
+
+// Неправильно — сломает npm run dev (это API v1.x+)
+const { createProxyMiddleware } = require('http-proxy-middleware')
+```
 
 ### `Error: connect ECONNREFUSED 127.0.0.1:27017`
 

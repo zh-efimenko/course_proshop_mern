@@ -104,6 +104,9 @@ COURSE: Fix dev environment setup for modern Node.js
 - Node.js v17+ requires `NODE_OPTIONS=--openssl-legacy-provider` (already in `package.json` client script)
 - `.env` is required but not committed — copy from teammate or create manually
 - API proxy настроен в `frontend/src/setupProxy.js` — читает `REACT_APP_API_URL` или дефолт `http://127.0.0.1:5001`. Не трогать `"proxy"` в `frontend/package.json` — его там нет намеренно.
+- `setupProxy.js` использует `http-proxy-middleware` **v0.x** API: `const proxy = require('http-proxy-middleware')`. Не использовать `{ createProxyMiddleware }` — это v1.x, сломает `npm run dev`.
+- `authMiddleware.js` проверяет `req.user` на `null` после `User.findById()` — если пользователь удалён из БД, а токен в localStorage ещё живой, без этой проверки будет краш. Пользователю нужно разлогиниться.
+- Docker Compose: frontend требует `stdin_open: true` — без него `webpack-dev-server 3.x` завершается с кодом 0 сразу после старта (stdin закрывается в non-TTY окружении). MongoDB требует healthcheck — `seeder` и `backend` стартуют только после `service_healthy`.
 
 ## MR Review Checklist
 
