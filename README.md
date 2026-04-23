@@ -43,7 +43,69 @@
 
 ## Установка и запуск
 
-### Prerequisites
+Проект поддерживает два способа запуска: через **Docker Compose** (рекомендуется) и **локально**.
+
+---
+
+### Способ 1 — Docker Compose (рекомендуется)
+
+**Prerequisites:** только [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+
+#### 1. Создайте `.env` в корне проекта
+
+```
+NODE_ENV=development
+PORT=5001
+MONGO_URI=mongodb://localhost:27017/proshop
+JWT_SECRET=your_jwt_secret
+PAYPAL_CLIENT_ID=your_paypal_client_id
+```
+
+> `MONGO_URI` в `.env` используется только для локального запуска. В Docker Compose он автоматически переопределяется на `mongodb://mongo:27017/proshop`.
+
+#### 2. Запустите
+
+```bash
+docker-compose up --build
+```
+
+При первом запуске автоматически:
+- Поднимается MongoDB
+- Запускается сидер и заполняет базу тестовыми данными
+- Стартует backend (порт 5001) и frontend (порт 3000)
+
+Компиляция frontend при первом запуске занимает 1–2 минуты.
+
+#### Доступ
+
+| Сервис | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:5001/api |
+| MongoDB | localhost:27017 |
+
+#### Полезные команды
+
+```bash
+# Остановить все контейнеры
+docker-compose down
+
+# Остановить и удалить данные MongoDB (полный сброс)
+docker-compose down -v
+
+# Пересобрать образы после изменений в Dockerfile
+docker-compose up --build
+
+# Посмотреть логи конкретного сервиса
+docker-compose logs -f backend
+docker-compose logs -f frontend
+```
+
+---
+
+### Способ 2 — Локальный запуск
+
+**Prerequisites:**
 
 | Инструмент | Версия | Примечание |
 |---|---|---|
@@ -57,7 +119,7 @@
 docker run -d -p 27017:27017 --name mongo mongo:7
 ```
 
-### Env-переменные
+#### Env-переменные
 
 Создайте файл `.env` в корне проекта:
 
@@ -77,7 +139,7 @@ PAYPAL_CLIENT_ID=your_paypal_client_id
 | `JWT_SECRET` | `utils/generateToken.js`, `authMiddleware.js` | Секрет для подписи JWT-токенов |
 | `PAYPAL_CLIENT_ID` | `server.js` → `/api/config/paypal` | Client ID из PayPal Developer Dashboard (sandbox или live) |
 
-### Установка зависимостей
+#### Установка зависимостей
 
 ```bash
 # Установить backend-зависимости (корень)
@@ -88,7 +150,7 @@ cd frontend
 npm install
 ```
 
-### Запуск
+#### Запуск
 
 ```bash
 # Backend + Frontend одновременно
@@ -101,7 +163,7 @@ npm run server
 npm run client
 ```
 
-### Первичная загрузка данных
+#### Первичная загрузка данных
 
 ```bash
 # Импортировать тестовые товары и пользователей
@@ -111,7 +173,11 @@ npm run data:import
 npm run data:destroy
 ```
 
-Тестовые аккаунты после сида:
+---
+
+### Тестовые аккаунты
+
+Доступны после запуска через Docker Compose (сид автоматический) или после `npm run data:import`:
 
 | Email | Пароль | Роль |
 |---|---|---|
@@ -141,8 +207,23 @@ Node.js v17+ использует OpenSSL 3, несовместимый с webpa
 
 ### Запросы к API возвращают 403
 
-1. Проверьте, что `PORT` в `.env` совпадает с `proxy` в `frontend/package.json`. Сейчас оба должны быть **5001**.
+1. Убедитесь что `PORT` в `.env` равен **5001** — локальный proxy по умолчанию идёт на `http://127.0.0.1:5001`.
 2. Проверьте, что сервер реально запустился (нет ошибок в консоли).
+
+### Proxy — как устроена маршрутизация API-запросов
+
+Запросы к `/api` и `/uploads` автоматически проксируются с frontend dev-сервера на backend. Настройка находится в `frontend/src/setupProxy.js`:
+
+```js
+const target = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5001'
+```
+
+| Режим | `REACT_APP_API_URL` | Прокси идёт на |
+|---|---|---|
+| Локальный (`npm run dev`) | не задан | `http://127.0.0.1:5001` |
+| Docker Compose | `http://backend:5001` (задан в compose) | Docker-сервис `backend` |
+
+Это позволяет использовать один и тот же код без конфликта между режимами.
 
 ### `Error: connect ECONNREFUSED 127.0.0.1:27017`
 

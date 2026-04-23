@@ -53,7 +53,7 @@ Create React App (react-scripts 3.4.3) + Redux + React Router v5.
 - **Actions:** `frontend/src/actions/` — async action creators calling the backend API via axios
 - **Screens:** `frontend/src/screens/` — page-level components (Home, Product, Cart, Login, Register, Shipping, Payment, PlaceOrder, Order, Profile, Admin screens)
 - **Components:** `frontend/src/components/` — reusable UI (Header, Footer, Rating, etc.)
-- **Proxy:** `frontend/package.json` proxies API calls to `http://127.0.0.1:5001`
+- **Proxy:** `frontend/src/setupProxy.js` проксирует `/api` и `/uploads` на backend. Адрес берётся из `REACT_APP_API_URL` (если задан) или дефолт `http://127.0.0.1:5001` для локального запуска. В Docker Compose `REACT_APP_API_URL=http://backend:5001` задаётся в `docker-compose.yml`.
 
 ### Environment (`.env`)
 
@@ -103,7 +103,7 @@ COURSE: Fix dev environment setup for modern Node.js
 - Port 5000 is occupied by macOS AirPlay Receiver — use 5001 instead
 - Node.js v17+ requires `NODE_OPTIONS=--openssl-legacy-provider` (already in `package.json` client script)
 - `.env` is required but not committed — copy from teammate or create manually
-- `frontend/package.json` proxy must match `PORT` in `.env`
+- API proxy настроен в `frontend/src/setupProxy.js` — читает `REACT_APP_API_URL` или дефолт `http://127.0.0.1:5001`. Не трогать `"proxy"` в `frontend/package.json` — его там нет намеренно.
 
 ## MR Review Checklist
 
