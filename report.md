@@ -14,3 +14,7 @@ Last 3 additions to CLAUDE.md:
 - **IDE:** IntelliJ IDEA
 - **Agent:** Claude Code (CLI)
 - **LLM:** glm-5.1 (Z.ai)
+
+## Verification
+
+Запустил локально через docker mongo + npm run dev

@@ -1,127 +1,185 @@
-# ProShop eCommerce Platform
+# ProShop
 
-> eCommerce platform built with the MERN stack & Redux.
+Интернет-магазин на MERN-стеке (MongoDB, Express, React, Node.js) с Redux. Учебный проект из курса Брэда Траверси. Поддерживает каталог товаров, корзину, оформление заказа с оплатой через PayPal, отзывы, панель администратора. Оригинальный репозиторий объявлен deprecated, есть [v2 на Redux Toolkit](https://github.com/bradtraversy/proshop-v2).
 
-### THIS PROJECT IS DEPRECATED
-This project is no longer supported. The new project/course has been released. The code has been cleaned up and now uses Redux Toolkit. You can find the new version [HERE](https://github.com/bradtraversy/proshop-v2)
+## Tech Stack
 
-![screenshot](https://github.com/bradtraversy/proshop_mern/blob/master/uploads/Screen%20Shot%202020-09-29%20at%205.50.52%20PM.png)
+**Backend:** Node.js (ES modules), Express 4.17, Mongoose 5.10, JWT (jsonwebtoken 8.5), bcryptjs, multer, morgan
 
-## Features
+**Frontend:** React 16.13, Redux 4 + redux-thunk 2.3, React Router 5, React Bootstrap 1.3, react-scripts 3.4.3, axios 0.20
 
-- Full featured shopping cart
-- Product reviews and ratings
-- Top products carousel
-- Product pagination
-- Product search feature
-- User profile with orders
-- Admin product management
-- Admin user management
-- Admin Order details page
-- Mark orders as delivered option
-- Checkout process (shipping, payment method, etc)
-- PayPal / credit card integration
-- Database seeder (products & users)
+**Dev tools:** nodemon, concurrently 5.3
 
-## Note on Issues
-Please do not post issues here that are related to your own code when taking the course. Add those in the Udemy Q/A. If you clone THIS repo and there are issues, then you can submit
+**База данных:** MongoDB
 
-## Usage
-
-### ES Modules in Node
-
-We use ECMAScript Modules in the backend in this project. Be sure to have at least Node v14.6+ or you will need to add the "--experimental-modules" flag.
-
-Also, when importing a file (not a package), be sure to add .js at the end or you will get a "module not found" error
-
-You can also install and setup Babel if you would like
-
-### Env Variables
-
-Create a .env file in then root and add the following
+## Структура проекта
 
 ```
-NODE_ENV = development
-PORT = 5000
-MONGO_URI = your mongodb uri
-JWT_SECRET = 'abc123'
-PAYPAL_CLIENT_ID = your paypal client id
+├── backend/
+│   ├── config/          # Подключение к MongoDB
+│   ├── controllers/     # Бизнес-логика (products, users, orders)
+│   ├── data/            # Сидовые данные (products.js, users.js)
+│   ├── middleware/       # auth (JWT protect + admin), error handler
+│   ├── models/          # Mongoose-схемы (User, Product, Order)
+│   ├── routes/          # Express-роуты (/api/products, /users, /orders, /upload)
+│   ├── utils/           # generateToken (JWT)
+│   ├── seeder.js        # Импорт/удаление сидовых данных
+│   └── server.js        # Точка входа
+├── frontend/
+│   └── src/
+│       ├── actions/     # Redux async actions (API-вызовы через axios)
+│       ├── components/  # Переиспользуемые UI-компоненты
+│       ├── constants/   # Типы Redux-экшенов
+│       ├── reducers/    # Redux-редьюсеры (product, user, order, cart)
+│       ├── screens/     # Страницы (Home, Cart, Login, Order, Admin и т.д.)
+│       ├── App.js       # Роутинг
+│       ├── store.js     # Redux store (redux-thunk)
+│       └── index.js     # Точка входа
+├── uploads/             # Загруженные изображения товаров
+├── docs/                # Документация
+├── CLAUDE.md            # Правила для AI-ассистента
+└── package.json         # Root: backend deps + concurrently-скрипты
 ```
 
-### Install Dependencies (frontend & backend)
+## Установка и запуск
+
+### Prerequisites
+
+| Инструмент | Версия | Примечание |
+|---|---|---|
+| Node.js | v16+ (до v24 включительно) | При v17+ нужен флаг `--openssl-legacy-provider` (уже в скриптах) |
+| MongoDB | 4.x+ | Локально или Docker |
+| npm | 6+ | |
+
+**Запуск MongoDB через Docker:**
+
+```bash
+docker run -d -p 27017:27017 --name mongo mongo:7
+```
+
+### Env-переменные
+
+Создайте файл `.env` в корне проекта:
 
 ```
+NODE_ENV=development
+PORT=5001
+MONGO_URI=mongodb://localhost:27017/proshop
+JWT_SECRET=your_jwt_secret
+PAYPAL_CLIENT_ID=your_paypal_client_id
+```
+
+| Переменная | Где используется | Описание |
+|---|---|---|
+| `NODE_ENV` | `server.js`, `errorMiddleware.js` | Режим запуска (development/production) |
+| `PORT` | `server.js` | Порт сервера. Используйте **5001**, порт 5000 занят AirPlay Receiver в macOS |
+| `MONGO_URI` | `config/db.js` | Строка подключения к MongoDB (обязательно с `mongodb://` или `mongodb+srv://`) |
+| `JWT_SECRET` | `utils/generateToken.js`, `authMiddleware.js` | Секрет для подписи JWT-токенов |
+| `PAYPAL_CLIENT_ID` | `server.js` → `/api/config/paypal` | Client ID из PayPal Developer Dashboard (sandbox или live) |
+
+### Установка зависимостей
+
+```bash
+# Установить backend-зависимости (корень)
 npm install
+
+# Установить frontend-зависимости
 cd frontend
 npm install
 ```
 
-### Run
+### Запуск
 
-```
-# Run frontend (:3000) & backend (:5000)
+```bash
+# Backend + Frontend одновременно
 npm run dev
 
-# Run backend only
+# Только backend (порт из .env, по умолчанию 5001)
 npm run server
+
+# Только frontend (порт 3000)
+npm run client
 ```
 
-## Build & Deploy
+### Первичная загрузка данных
 
-```
-# Create frontend prod build
-cd frontend
-npm run build
-```
-
-There is a Heroku postbuild script, so if you push to Heroku, no need to build manually for deployment to Heroku
-
-### Seed Database
-
-You can use the following commands to seed the database with some sample users and products as well as destroy all data
-
-```
-# Import data
+```bash
+# Импортировать тестовые товары и пользователей
 npm run data:import
 
-# Destroy data
+# Удалить все данные из базы
 npm run data:destroy
 ```
 
+Тестовые аккаунты после сида:
+
+| Email | Пароль | Роль |
+|---|---|---|
+| admin@example.com | 123456 | Admin |
+| john@example.com | 123456 | Customer |
+| jane@example.com | 123456 | Customer |
+
+## Troubleshooting
+
+### `Error: Invalid connection string`
+
+`MONGO_URI` указан без префикса. Должно быть:
 ```
-Sample User Logins
+MONGO_URI=mongodb://localhost:27017/proshop
+```
+Не `localhost:27017/proshop`.
 
-admin@example.com (Admin)
-123456
+### `Error: error:0308010C:digital envelope routines::unsupported`
 
-john@example.com (Customer)
-123456
+Node.js v17+ использует OpenSSL 3, несовместимый с webpack 4 из react-scripts 3.4.3. Флаг уже добавлен в `package.json`:
 
-jane@example.com (Customer)
-123456
+```json
+"client": "NODE_OPTIONS=--openssl-legacy-provider npm start --prefix frontend"
 ```
 
+Если запускаете frontend вручную: `NODE_OPTIONS=--openssl-legacy-provider npm start --prefix frontend`.
+
+### Запросы к API возвращают 403
+
+1. Проверьте, что `PORT` в `.env` совпадает с `proxy` в `frontend/package.json`. Сейчас оба должны быть **5001**.
+2. Проверьте, что сервер реально запустился (нет ошибок в консоли).
+
+### `Error: connect ECONNREFUSED 127.0.0.1:27017`
+
+MongoDB не запущен. Проверьте:
+```bash
+# Если через Docker
+docker ps | grep mongo
+
+# Запустить, если не запущен
+docker run -d -p 27017:27017 --name mongo mongo:7
+```
+
+### Port 5000 уже занят (macOS)
+
+macOS Monterey+ использует порт 5000 для AirPlay Receiver. Решения:
+- Использовать порт 5001 (рекомендуется, уже настроено)
+- Или отключить: System Settings → General → AirDrop & Handoff → выключить AirPlay Receiver
+
+### PayPal кнопка не отображается
+
+- Для разработки используйте PayPal Sandbox: [developer.paypal.com](https://developer.paypal.com)
+- Создайте sandbox-приложение, скопируйте Client ID в `.env`
+- Для оплаты используйте sandbox-аккаунт покупателя (не реальный PayPal)
+- Если PAYPAL_CLIENT_ID пустой, кнопка не отобразится, но остальной функционал работает
+
+### Backend-импорты падают с "module not found"
+
+Проект использует ES modules (`"type": "module"` в `package.json`). Все локальные импорты должны содержать расширение `.js`:
+
+```js
+// Правильно
+import Product from '../models/productModel.js'
+
+// Неправильно — ошибка
+import Product from '../models/productModel'
+```
 
 ## License
 
-The MIT License
-
-Copyright (c) 2020 Traversy Media https://traversymedia.com
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+MIT — Copyright (c) 2020 Traversy Media
