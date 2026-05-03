@@ -27,3 +27,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .vscode/settings.json
+
+# qdrant vector data
+docs/rag/qdrant-data/*
+!docs/rag/qdrant-data/.gitkeep
