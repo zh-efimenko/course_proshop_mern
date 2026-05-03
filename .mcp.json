@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "features": {
+      "command": "node",
+      "args": ["mcp-features/index.js"]
+    }
+  }
+}
