@@ -21,6 +21,9 @@ import {
   PRODUCT_TOP_REQUEST,
   PRODUCT_TOP_SUCCESS,
   PRODUCT_TOP_FAIL,
+  PRODUCT_RECOMMENDATIONS_REQUEST,
+  PRODUCT_RECOMMENDATIONS_SUCCESS,
+  PRODUCT_RECOMMENDATIONS_FAIL,
 } from '../constants/productConstants'
 import { logout } from './userActions'
 
@@ -96,7 +99,7 @@ export const deleteProduct = (id) => async (dispatch, getState) => {
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({
@@ -133,7 +136,7 @@ export const createProduct = () => async (dispatch, getState) => {
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({
@@ -176,7 +179,7 @@ export const updateProduct = (product) => async (dispatch, getState) => {
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({
@@ -199,9 +202,10 @@ export const createProductReview = (productId, review) => async (
       userLogin: { userInfo },
     } = getState()
 
+    const isFormData = review instanceof FormData
     const config = {
       headers: {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         Authorization: `Bearer ${userInfo.token}`,
       },
     }
@@ -216,7 +220,7 @@ export const createProductReview = (productId, review) => async (
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({
@@ -239,6 +243,27 @@ export const listTopProducts = () => async (dispatch) => {
   } catch (error) {
     dispatch({
       type: PRODUCT_TOP_FAIL,
+      payload:
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : error.message,
+    })
+  }
+}
+
+export const listProductRecommendations = (id) => async (dispatch) => {
+  try {
+    dispatch({ type: PRODUCT_RECOMMENDATIONS_REQUEST })
+
+    const { data } = await axios.get(`/api/products/recommend/${id}`)
+
+    dispatch({
+      type: PRODUCT_RECOMMENDATIONS_SUCCESS,
+      payload: data,
+    })
+  } catch (error) {
+    dispatch({
+      type: PRODUCT_RECOMMENDATIONS_FAIL,
       payload:
         error.response && error.response.data.message
           ? error.response.data.message

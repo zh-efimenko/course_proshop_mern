@@ -10,6 +10,12 @@ const reviewSchema = mongoose.Schema(
       required: true,
       ref: 'User',
     },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+    images: [{ type: String }],
   },
   {
     timestamps: true,

@@ -163,6 +163,13 @@ const OrderScreen = ({ match, history }) => {
                 </ListGroup>
               )}
             </ListGroup.Item>
+
+            {order.giftMessage && (
+              <ListGroup.Item>
+                <h2>Gift Message</h2>
+                <p>{order.giftMessage}</p>
+              </ListGroup.Item>
+            )}
           </ListGroup>
         </Col>
         <Col md={4}>

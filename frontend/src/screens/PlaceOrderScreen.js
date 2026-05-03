@@ -1,24 +1,60 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, Row, Col, ListGroup, Image, Card } from 'react-bootstrap'
+import { Button, Row, Col, ListGroup, Image, Card, Form } from 'react-bootstrap'
 import { useDispatch, useSelector } from 'react-redux'
 import Message from '../components/Message'
 import CheckoutSteps from '../components/CheckoutSteps'
 import { createOrder } from '../actions/orderActions'
 import { ORDER_CREATE_RESET } from '../constants/orderConstants'
 import { USER_DETAILS_RESET } from '../constants/userConstants'
+import useFeatureEnabled from '../hooks/useFeatureEnabled'
 
 const PlaceOrderScreen = ({ history }) => {
   const dispatch = useDispatch()
 
+  const [isGift, setIsGift] = useState(false)
+  const [giftMessage, setGiftMessage] = useState('')
+
+  const giftMessageEnabled = useFeatureEnabled('gift_message')
+  const multiStepCheckoutEnabled = useFeatureEnabled('multi_step_checkout_v2')
+
   const cart = useSelector((state) => state.cart)
+
+  const orderCreate = useSelector((state) => state.orderCreate)
+  const { order, success, error } = orderCreate
+
+  useEffect(() => {
+    if (multiStepCheckoutEnabled) {
+      history.push('/checkout')
+    }
+  }, [multiStepCheckoutEnabled, history])
+
+  useEffect(() => {
+    if (success) {
+      history.push(`/order/${order._id}`)
+      dispatch({ type: USER_DETAILS_RESET })
+      dispatch({ type: ORDER_CREATE_RESET })
+    }
+    // eslint-disable-next-line
+  }, [history, success])
+
+  useEffect(() => {
+    if (!giftMessageEnabled) {
+      setIsGift(false)
+      setGiftMessage('')
+    }
+  }, [giftMessageEnabled])
+
+  if (multiStepCheckoutEnabled) {
+    return null
+  }
 
   if (!cart.shippingAddress.address) {
     history.push('/shipping')
   } else if (!cart.paymentMethod) {
     history.push('/payment')
   }
-  //   Calculate prices
+
   const addDecimals = (num) => {
     return (Math.round(num * 100) / 100).toFixed(2)
   }
@@ -34,18 +70,6 @@ const PlaceOrderScreen = ({ history }) => {
     Number(cart.taxPrice)
   ).toFixed(2)
 
-  const orderCreate = useSelector((state) => state.orderCreate)
-  const { order, success, error } = orderCreate
-
-  useEffect(() => {
-    if (success) {
-      history.push(`/order/${order._id}`)
-      dispatch({ type: USER_DETAILS_RESET })
-      dispatch({ type: ORDER_CREATE_RESET })
-    }
-    // eslint-disable-next-line
-  }, [history, success])
-
   const placeOrderHandler = () => {
     dispatch(
       createOrder({
@@ -56,6 +80,7 @@ const PlaceOrderScreen = ({ history }) => {
         shippingPrice: cart.shippingPrice,
         taxPrice: cart.taxPrice,
         totalPrice: cart.totalPrice,
+        giftMessage: isGift ? giftMessage.trim() : '',
       })
     )
   }
@@ -113,6 +138,37 @@ const PlaceOrderScreen = ({ history }) => {
                 </ListGroup>
               )}
             </ListGroup.Item>
+            {giftMessageEnabled && (
+              <ListGroup.Item>
+                <Form.Group controlId='isGift' className='mb-0'>
+                  <Form.Check
+                    type='checkbox'
+                    label='This is a gift order'
+                    checked={isGift}
+                    onChange={(e) => {
+                      setIsGift(e.target.checked)
+                      if (!e.target.checked) setGiftMessage('')
+                    }}
+                  />
+                </Form.Group>
+                {isGift && (
+                  <Form.Group controlId='giftMessage' className='mt-2 mb-0'>
+                    <Form.Label>Gift Message</Form.Label>
+                    <Form.Control
+                      as='textarea'
+                      rows={3}
+                      maxLength={200}
+                      value={giftMessage}
+                      onChange={(e) => setGiftMessage(e.target.value)}
+                      placeholder='Add a personal message...'
+                    />
+                    <Form.Text className='text-muted'>
+                      {giftMessage.length}/200
+                    </Form.Text>
+                  </Form.Group>
+                )}
+              </ListGroup.Item>
+            )}
           </ListGroup>
         </Col>
         <Col md={4}>

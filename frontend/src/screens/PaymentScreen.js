@@ -1,21 +1,33 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Form, Button, Col } from 'react-bootstrap'
 import { useDispatch, useSelector } from 'react-redux'
 import FormContainer from '../components/FormContainer'
 import CheckoutSteps from '../components/CheckoutSteps'
 import { savePaymentMethod } from '../actions/cartActions'
+import useFeatureEnabled from '../hooks/useFeatureEnabled'
 
 const PaymentScreen = ({ history }) => {
+  const dispatch = useDispatch()
   const cart = useSelector((state) => state.cart)
   const { shippingAddress } = cart
+
+  const multiStepCheckoutEnabled = useFeatureEnabled('multi_step_checkout_v2')
+
+  const [paymentMethod, setPaymentMethod] = useState('PayPal')
+
+  useEffect(() => {
+    if (multiStepCheckoutEnabled) {
+      history.push('/checkout')
+    }
+  }, [multiStepCheckoutEnabled, history])
+
+  if (multiStepCheckoutEnabled) {
+    return null
+  }
 
   if (!shippingAddress.address) {
     history.push('/shipping')
   }
-
-  const [paymentMethod, setPaymentMethod] = useState('PayPal')
-
-  const dispatch = useDispatch()
 
   const submitHandler = (e) => {
     e.preventDefault()

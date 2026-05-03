@@ -21,8 +21,9 @@
 │   ├── data/            # Сидовые данные (products.js, users.js)
 │   ├── middleware/       # auth (JWT protect + admin), error handler
 │   ├── models/          # Mongoose-схемы (User, Product, Order)
-│   ├── routes/          # Express-роуты (/api/products, /users, /orders, /upload)
+│   ├── routes/          # Express-роуты (/api/products, /users, /orders, /upload, /featureflags)
 │   ├── utils/           # generateToken (JWT)
+│   ├── features.json    # Feature flags (источник данных для /api/featureflags)
 │   ├── seeder.js        # Импорт/удаление сидовых данных
 │   └── server.js        # Точка входа
 ├── frontend/
@@ -30,7 +31,7 @@
 │       ├── actions/     # Redux async actions (API-вызовы через axios)
 │       ├── components/  # Переиспользуемые UI-компоненты
 │       ├── constants/   # Типы Redux-экшенов
-│       ├── reducers/    # Redux-редьюсеры (product, user, order, cart)
+│       ├── reducers/    # Redux-редьюсеры (product, user, order, cart, featureFlags)
 │       ├── screens/     # Страницы (Home, Cart, Login, Order, Admin и т.д.)
 │       ├── setupProxy.js  # Dev-proxy: /api и /uploads → backend (http-proxy-middleware v0.x)
 │       ├── App.js         # Роутинг
@@ -272,6 +273,33 @@ import Product from '../models/productModel.js'
 // Неправильно — ошибка
 import Product from '../models/productModel'
 ```
+
+## Feature Flags
+
+Флаги хранятся в `backend/features.json` (25 штук). При старте приложения они загружаются в Redux (`state.featureFlags`) и доступны во всех компонентах.
+
+**Просмотр:** войти под админом → меню Admin → Feature Flags.
+
+**Обновление флага:** отредактировать `backend/features.json` напрямую или через MCP. Изменения вступают в силу после перезагрузки страницы — рестарт сервера не нужен.
+
+Структура одного флага:
+
+```json
+{
+  "flag_key": {
+    "name": "Человекочитаемое название",
+    "description": "Описание фичи",
+    "status": "Enabled | Testing | Disabled",
+    "traffic_percentage": 0,
+    "rollout_strategy": "canary | ab_test | full_release",
+    "targeted_segments": ["all"],
+    "last_modified": "YYYY-MM-DD",
+    "dependencies": ["other_flag_key"]
+  }
+}
+```
+
+> `dependencies` — опциональное поле. `backend/features.json` монтируется в Docker Compose автоматически через `./backend:/app/backend`.
 
 ## License
 

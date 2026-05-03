@@ -1,20 +1,32 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Form, Button } from 'react-bootstrap'
 import { useDispatch, useSelector } from 'react-redux'
 import FormContainer from '../components/FormContainer'
 import CheckoutSteps from '../components/CheckoutSteps'
 import { saveShippingAddress } from '../actions/cartActions'
+import useFeatureEnabled from '../hooks/useFeatureEnabled'
 
 const ShippingScreen = ({ history }) => {
+  const dispatch = useDispatch()
   const cart = useSelector((state) => state.cart)
   const { shippingAddress } = cart
+
+  const multiStepCheckoutEnabled = useFeatureEnabled('multi_step_checkout_v2')
 
   const [address, setAddress] = useState(shippingAddress.address)
   const [city, setCity] = useState(shippingAddress.city)
   const [postalCode, setPostalCode] = useState(shippingAddress.postalCode)
   const [country, setCountry] = useState(shippingAddress.country)
 
-  const dispatch = useDispatch()
+  useEffect(() => {
+    if (multiStepCheckoutEnabled) {
+      history.push('/checkout')
+    }
+  }, [multiStepCheckoutEnabled, history])
+
+  if (multiStepCheckoutEnabled) {
+    return null
+  }
 
   const submitHandler = (e) => {
     e.preventDefault()

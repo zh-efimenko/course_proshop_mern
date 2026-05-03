@@ -42,6 +42,7 @@ Express + MongoDB (Mongoose). Uses ES modules (`"type": "module"` in root `packa
   - `/api/orders` — create, pay (PayPal), deliver, list
   - `/api/upload` — multer file uploads to `/uploads/`
   - `/api/config/paypal` — returns client ID
+  - `/api/featureflags` — returns `backend/features.json` as JSON (no auth)
 - **Middleware:** `backend/middleware/authMiddleware.js` — JWT `protect` + `admin` guards. `errorMiddleware.js` — global error handler.
 - **Config:** `backend/config/db.js` — Mongoose connection using `MONGO_URI` env var
 
@@ -49,10 +50,11 @@ Express + MongoDB (Mongoose). Uses ES modules (`"type": "module"` in root `packa
 
 Create React App (react-scripts 3.4.3) + Redux + React Router v5.
 
-- **State:** Redux store (`frontend/src/store.js`) with `redux-thunk`. Reducers in `frontend/src/reducers/` for products, users, orders, cart. Cart and user auth state persisted to localStorage.
+- **State:** Redux store (`frontend/src/store.js`) with `redux-thunk`. Reducers in `frontend/src/reducers/` for products, users, orders, cart, featureFlags. Cart and user auth state persisted to localStorage. Feature flags loaded into Redux on app mount (`App.js` dispatches `loadFeatureFlags` via `useEffect`).
 - **Actions:** `frontend/src/actions/` — async action creators calling the backend API via axios
 - **Screens:** `frontend/src/screens/` — page-level components (Home, Product, Cart, Login, Register, Shipping, Payment, PlaceOrder, Order, Profile, Admin screens)
 - **Components:** `frontend/src/components/` — reusable UI (Header, Footer, Rating, etc.)
+- **Hooks:** `frontend/src/hooks/` — `useDarkMode` (theme toggle), `useFeatureEnabled` (feature flag check with traffic bucket)
 - **Proxy:** `frontend/src/setupProxy.js` проксирует `/api` и `/uploads` на backend. Адрес берётся из `REACT_APP_API_URL` (если задан) или дефолт `http://127.0.0.1:5001` для локального запуска. В Docker Compose `REACT_APP_API_URL=http://backend:5001` задаётся в `docker-compose.yml`.
 
 ### Environment (`.env`)
@@ -74,6 +76,8 @@ Port 5001 instead of 5000 — macOS AirPlay Receiver occupies 5000.
 - Admin routes protected by `protect` + `admin` middleware chain
 - Product images: uploaded via multer to `uploads/`, served as static files
 - Frontend uses `NODE_OPTIONS=--openssl-legacy-provider` for Node.js v17+ compatibility with old webpack
+- Feature flags: always check via `useFeatureEnabled('key')` hook — never use raw `flags.find(...)?.status`. The hook handles `Enabled`, `Disabled`, and `Testing` with traffic percentage (`sessionStorage ff_traffic_bucket`).
+- Backend feature flags: use `isFeatureEnabled(flagKey, { isAdmin })` from `backend/utils/featureFlag.js` — never inline-read `features.json` in controllers. Mirrors frontend logic: `Enabled` → always true, `Testing` → true for admins or by traffic %, `Disabled` → always false.
 
 ## Commit Conventions
 
@@ -107,6 +111,7 @@ COURSE: Fix dev environment setup for modern Node.js
 - `setupProxy.js` использует `http-proxy-middleware` **v0.x** API: `const proxy = require('http-proxy-middleware')`. Не использовать `{ createProxyMiddleware }` — это v1.x, сломает `npm run dev`.
 - `authMiddleware.js` проверяет `req.user` на `null` после `User.findById()` — если пользователь удалён из БД, а токен в localStorage ещё живой, без этой проверки будет краш. Пользователю нужно разлогиниться.
 - Docker Compose: frontend требует `stdin_open: true` — без него `webpack-dev-server 3.x` завершается с кодом 0 сразу после старта (stdin закрывается в non-TTY окружении). MongoDB требует healthcheck — `seeder` и `backend` стартуют только после `service_healthy`.
+- `backend/features.json` — источник данных для feature flags. Путь в роуте вычисляется через `import.meta.url` (не через `process.cwd()`), поэтому файл должен лежать рядом с `backend/routes/featureFlagRoutes.js` (т.е. на уровень выше — `backend/`). Docker Compose монтирует `./backend:/app/backend`, поэтому файл доступен в контейнере автоматически. MCP-интеграция пишет в этот файл; пользователь видит изменения после перезагрузки страницы.
 
 ## MR Review Checklist
 

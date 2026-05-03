@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Row, Col, ListGroup, Image, Form, Button, Card } from 'react-bootstrap'
 import Message from '../components/Message'
 import { addToCart, removeFromCart } from '../actions/cartActions'
+import useFeatureEnabled from '../hooks/useFeatureEnabled'
 
 const CartScreen = ({ match, location, history }) => {
   const productId = match.params.id
@@ -14,6 +15,8 @@ const CartScreen = ({ match, location, history }) => {
 
   const cart = useSelector((state) => state.cart)
   const { cartItems } = cart
+
+  const multiStepCheckoutEnabled = useFeatureEnabled('multi_step_checkout_v2')
 
   useEffect(() => {
     if (productId) {
@@ -26,7 +29,11 @@ const CartScreen = ({ match, location, history }) => {
   }
 
   const checkoutHandler = () => {
-    history.push('/login?redirect=shipping')
+    history.push(
+      multiStepCheckoutEnabled
+        ? '/login?redirect=checkout'
+        : '/login?redirect=shipping'
+    )
   }
 
   return (

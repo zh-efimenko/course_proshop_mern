@@ -2,15 +2,21 @@ import React from 'react'
 import { Route } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { LinkContainer } from 'react-router-bootstrap'
-import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap'
+import { Navbar, Nav, Container, NavDropdown, Button } from 'react-bootstrap'
 import SearchBox from './SearchBox'
 import { logout } from '../actions/userActions'
+import useDarkMode from '../hooks/useDarkMode'
+import useFeatureEnabled from '../hooks/useFeatureEnabled'
 
 const Header = () => {
   const dispatch = useDispatch()
 
   const userLogin = useSelector((state) => state.userLogin)
   const { userInfo } = userLogin
+
+  const moderationEnabled = useFeatureEnabled('reviews_moderation')
+  const [isDark, toggleDarkMode] = useDarkMode()
+  const darkModeEnabled = useFeatureEnabled('dark_mode')
 
   const logoutHandler = () => {
     dispatch(logout())
@@ -59,7 +65,25 @@ const Header = () => {
                   <LinkContainer to='/admin/orderlist'>
                     <NavDropdown.Item>Orders</NavDropdown.Item>
                   </LinkContainer>
+                  <LinkContainer to='/admin/featureflags'>
+                    <NavDropdown.Item>Feature Flags</NavDropdown.Item>
+                  </LinkContainer>
+                  {moderationEnabled && (
+                    <LinkContainer to='/admin/reviews'>
+                      <NavDropdown.Item>Review Queue</NavDropdown.Item>
+                    </LinkContainer>
+                  )}
                 </NavDropdown>
+              )}
+              {darkModeEnabled && (
+                <Button
+                  variant='link'
+                  onClick={toggleDarkMode}
+                  aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                  style={{ color: 'rgba(255,255,255,0.55)', fontSize: '1.2rem', padding: '0.5rem' }}
+                >
+                  {isDark ? '☀️' : '🌙'}
+                </Button>
               )}
             </Nav>
           </Navbar.Collapse>

@@ -141,7 +141,7 @@ export const getUserDetails = (id) => async (dispatch, getState) => {
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({
@@ -184,7 +184,7 @@ export const updateUserProfile = (user) => async (dispatch, getState) => {
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({
@@ -221,7 +221,7 @@ export const listUsers = () => async (dispatch, getState) => {
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({
@@ -255,7 +255,7 @@ export const deleteUser = (id) => async (dispatch, getState) => {
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({
@@ -294,7 +294,7 @@ export const updateUser = (user) => async (dispatch, getState) => {
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({

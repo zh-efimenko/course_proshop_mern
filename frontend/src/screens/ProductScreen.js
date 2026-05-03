@@ -9,13 +9,17 @@ import Meta from '../components/Meta'
 import {
   listProductDetails,
   createProductReview,
+  listProductRecommendations,
 } from '../actions/productActions'
+import Product from '../components/Product'
 import { PRODUCT_CREATE_REVIEW_RESET } from '../constants/productConstants'
+import useFeatureEnabled from '../hooks/useFeatureEnabled'
 
 const ProductScreen = ({ history, match }) => {
   const [qty, setQty] = useState(1)
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
+  const [reviewImages, setReviewImages] = useState([])
 
   const dispatch = useDispatch()
 
@@ -32,14 +36,23 @@ const ProductScreen = ({ history, match }) => {
     error: errorProductReview,
   } = productReviewCreate
 
+  const recommendationsEnabled = useFeatureEnabled('product_recommendations')
+  const photoReviewsEnabled = useFeatureEnabled('photo_reviews')
+
+  const { products: recommendations = [] } = useSelector(
+    (state) => state.productRecommendations
+  )
+
   useEffect(() => {
     if (successProductReview) {
       setRating(0)
       setComment('')
+      setReviewImages([])
     }
-    if (!product._id || product._id !== match.params.id) {
+    if (!product || !product._id || product._id !== match.params.id) {
       dispatch(listProductDetails(match.params.id))
       dispatch({ type: PRODUCT_CREATE_REVIEW_RESET })
+      dispatch(listProductRecommendations(match.params.id))
     }
   }, [dispatch, match, successProductReview])
 
@@ -49,11 +62,17 @@ const ProductScreen = ({ history, match }) => {
 
   const submitHandler = (e) => {
     e.preventDefault()
+    let reviewPayload
+    if (photoReviewsEnabled && reviewImages.length > 0) {
+      reviewPayload = new FormData()
+      reviewPayload.append('rating', rating)
+      reviewPayload.append('comment', comment)
+      reviewImages.forEach((file) => reviewPayload.append('images', file))
+    } else {
+      reviewPayload = { rating, comment }
+    }
     dispatch(
-      createProductReview(match.params.id, {
-        rating,
-        comment,
-      })
+      createProductReview(match.params.id, reviewPayload)
     )
   }
 
@@ -159,6 +178,25 @@ const ProductScreen = ({ history, match }) => {
                     <Rating value={review.rating} />
                     <p>{review.createdAt.substring(0, 10)}</p>
                     <p>{review.comment}</p>
+                    {review.images && review.images.length > 0 && (
+                      <div className='d-flex flex-wrap'>
+                        {review.images.map((src, i) => (
+                          <Image
+                            key={i}
+                            src={src}
+                            alt={`review-img-${i}`}
+                            style={{
+                              width: '80px',
+                              height: '80px',
+                              objectFit: 'cover',
+                              marginRight: '8px',
+                              marginBottom: '8px',
+                            }}
+                            thumbnail
+                          />
+                        ))}
+                      </div>
+                    )}
                   </ListGroup.Item>
                 ))}
                 <ListGroup.Item>
@@ -198,6 +236,21 @@ const ProductScreen = ({ history, match }) => {
                           onChange={(e) => setComment(e.target.value)}
                         ></Form.Control>
                       </Form.Group>
+                      {photoReviewsEnabled && (
+                        <Form.Group controlId='reviewImages'>
+                          <Form.Label>Photos (up to 3)</Form.Label>
+                          <Form.Control
+                            type='file'
+                            multiple
+                            accept='image/*'
+                            onChange={(e) =>
+                              setReviewImages(
+                                Array.from(e.target.files).slice(0, 3)
+                              )
+                            }
+                          />
+                        </Form.Group>
+                      )}
                       <Button
                         disabled={loadingProductReview}
                         type='submit'
@@ -215,6 +268,20 @@ const ProductScreen = ({ history, match }) => {
               </ListGroup>
             </Col>
           </Row>
+          {recommendationsEnabled && recommendations.length > 0 && (
+            <Row className='mt-4'>
+              <Col>
+                <h2>You May Also Like</h2>
+                <Row>
+                  {recommendations.map((p) => (
+                    <Col key={p._id} sm={12} md={6} lg={4}>
+                      <Product product={p} />
+                    </Col>
+                  ))}
+                </Row>
+              </Col>
+            </Row>
+          )}
         </>
       )}
     </>

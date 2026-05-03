@@ -55,7 +55,7 @@ export const createOrder = (order) => async (dispatch, getState) => {
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({
@@ -92,7 +92,7 @@ export const getOrderDetails = (id) => async (dispatch, getState) => {
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({
@@ -137,7 +137,7 @@ export const payOrder = (orderId, paymentResult) => async (
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({
@@ -178,7 +178,7 @@ export const deliverOrder = (order) => async (dispatch, getState) => {
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({
@@ -215,7 +215,7 @@ export const listMyOrders = () => async (dispatch, getState) => {
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({
@@ -252,7 +252,7 @@ export const listOrders = () => async (dispatch, getState) => {
       error.response && error.response.data.message
         ? error.response.data.message
         : error.message
-    if (message === 'Not authorized, token failed') {
+    if (message.startsWith('Not authorized')) {
       dispatch(logout())
     }
     dispatch({

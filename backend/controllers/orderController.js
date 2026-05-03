@@ -13,28 +13,35 @@ const addOrderItems = asyncHandler(async (req, res) => {
     taxPrice,
     shippingPrice,
     totalPrice,
+    giftMessage,
   } = req.body
 
   if (orderItems && orderItems.length === 0) {
     res.status(400)
     throw new Error('No order items')
     return
-  } else {
-    const order = new Order({
-      orderItems,
-      user: req.user._id,
-      shippingAddress,
-      paymentMethod,
-      itemsPrice,
-      taxPrice,
-      shippingPrice,
-      totalPrice,
-    })
-
-    const createdOrder = await order.save()
-
-    res.status(201).json(createdOrder)
   }
+
+  if (giftMessage && giftMessage.length > 200) {
+    res.status(400)
+    throw new Error('Gift message must be 200 characters or fewer')
+  }
+
+  const order = new Order({
+    orderItems,
+    user: req.user._id,
+    shippingAddress,
+    paymentMethod,
+    itemsPrice,
+    taxPrice,
+    shippingPrice,
+    totalPrice,
+    giftMessage: giftMessage || '',
+  })
+
+  const createdOrder = await order.save()
+
+  res.status(201).json(createdOrder)
 })
 
 // @desc    Get order by ID
