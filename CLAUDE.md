@@ -22,6 +22,15 @@ npm run data:destroy
 
 # Production build
 cd frontend && npm run build
+
+# RAG — запустить Qdrant (однократно, данные в docs/rag/qdrant-data/)
+bash docs/rag/docker_qdrant.sh
+
+# RAG — проиндексировать project-data/ в Qdrant (повторно — полная переиндексация)
+cd mcp-rag && node ingest.js
+
+# RAG — smoke-тест чанкера без обращения к Qdrant/Cohere
+cd mcp-rag && node ingest.js --test
 ```
 
 No test framework is configured.
@@ -46,6 +55,15 @@ Express + MongoDB (Mongoose). Uses ES modules (`"type": "module"` in root `packa
 - **Middleware:** `backend/middleware/authMiddleware.js` — JWT `protect` + `admin` guards. `errorMiddleware.js` — global error handler.
 - **Config:** `backend/config/db.js` — Mongoose connection using `MONGO_URI` env var
 
+### RAG MCP Server (`mcp-rag/`)
+
+Semantic search over `project-data/` docs. Зарегистрирован в `.mcp.json` как `proshop-rag`.
+
+- **`ingest.js`** — pipeline: читает все `.md` из `project-data/`, нарезает на чанки по `## `-секциям (≤512 токенов), эмбеддит через Cohere `embed-multilingual-v3.0` (1024-мерный вектор), загружает в Qdrant коллекцию `proshop_docs`. Запускать вручную при добавлении/изменении документов.
+- **`index.js`** — MCP-сервер. Инструмент `search_project_docs(query, top_k)` — принимает вопрос на русском/английском, возвращает top-k чанков с полями `score`, `source_file`, `section`, `type`, `text`. Ресурс `proshop-docs-index` — список проиндексированных файлов.
+- **`docs/rag/docker_qdrant.sh`** — запуск Qdrant v1.14.0 с персистентным томом `docs/rag/qdrant-data/` (в `.gitignore`, кроме `.gitkeep`).
+- **Тип документа** определяется по пути: `runbooks/` → `runbook`, `incidents/` → `incident`, `adrs/` → `adr`, `features/` → `feature`, `api/` → `api`, `pages/` → `page`, остальное → `doc`.
+
 ### Frontend (`frontend/`)
 
 Create React App (react-scripts 3.4.3) + Redux + React Router v5.
@@ -65,9 +83,13 @@ PORT=5001
 MONGO_URI=mongodb://localhost:27017/proshop
 JWT_SECRET=...
 PAYPAL_CLIENT_ID=...
+COHERE_API_KEY=...
+QDRANT_URL=http://localhost:6333
 ```
 
 Port 5001 instead of 5000 — macOS AirPlay Receiver occupies 5000.
+
+`COHERE_API_KEY` — требуется для `mcp-rag/ingest.js` и `mcp-rag/index.js`. Без него RAG-сервер завершится при старте. `QDRANT_URL` опционален, дефолт `http://localhost:6333`.
 
 ### Key Patterns
 
@@ -78,6 +100,9 @@ Port 5001 instead of 5000 — macOS AirPlay Receiver occupies 5000.
 - Frontend uses `NODE_OPTIONS=--openssl-legacy-provider` for Node.js v17+ compatibility with old webpack
 - Feature flags: always check via `useFeatureEnabled('key')` hook — never use raw `flags.find(...)?.status`. The hook handles `Enabled`, `Disabled`, and `Testing` with traffic percentage (`sessionStorage ff_traffic_bucket`).
 - Backend feature flags: use `isFeatureEnabled(flagKey, { isAdmin })` from `backend/utils/featureFlag.js` — never inline-read `features.json` in controllers. Mirrors frontend logic: `Enabled` → always true, `Testing` → true for admins or by traffic %, `Disabled` → always false.
+- RAG ingest is idempotent — каждый запуск удаляет и пересоздаёт коллекцию `proshop_docs`. Запускать после добавления новых `.md` файлов в `project-data/`.
+- RAG MCP сервер (`proshop-rag`) автостартует через `.mcp.json`. Если Qdrant не запущен или коллекция не проиндексирована — инструмент вернёт `isError: true` с понятным сообщением.
+- Чанкер `ingest.js` экспортирует `buildChunks()` — можно импортировать отдельно без запуска full ingest pipeline (используй `--test` флаг для smoke-теста).
 
 ## Commit Conventions
 
@@ -112,6 +137,8 @@ COURSE: Fix dev environment setup for modern Node.js
 - `authMiddleware.js` проверяет `req.user` на `null` после `User.findById()` — если пользователь удалён из БД, а токен в localStorage ещё живой, без этой проверки будет краш. Пользователю нужно разлогиниться.
 - Docker Compose: frontend требует `stdin_open: true` — без него `webpack-dev-server 3.x` завершается с кодом 0 сразу после старта (stdin закрывается в non-TTY окружении). MongoDB требует healthcheck — `seeder` и `backend` стартуют только после `service_healthy`.
 - `backend/features.json` — источник данных для feature flags. Путь в роуте вычисляется через `import.meta.url` (не через `process.cwd()`), поэтому файл должен лежать рядом с `backend/routes/featureFlagRoutes.js` (т.е. на уровень выше — `backend/`). Docker Compose монтирует `./backend:/app/backend`, поэтому файл доступен в контейнере автоматически. MCP-интеграция пишет в этот файл; пользователь видит изменения после перезагрузки страницы.
+- RAG MCP: `mcp-rag/ingest.js` использует `import.meta.url` для вычисления пути к `project-data/` — файлы ищутся относительно расположения скрипта, не `process.cwd()`. При запуске из любой директории путь всегда корректен.
+- `docs/rag/qdrant-data/` игнорируется в git (кроме `.gitkeep`) — данные Qdrant не коммитятся. После клонирования репозитория нужно запустить Qdrant и выполнить `node mcp-rag/ingest.js` заново.
 
 ## MR Review Checklist
 

@@ -12,6 +12,8 @@
 
 **База данных:** MongoDB
 
+**RAG / AI:** Qdrant 1.14 (векторная БД), Cohere `embed-multilingual-v3.0` (эмбеддинги), MCP SDK 1.29 (`@modelcontextprotocol/sdk`)
+
 ## Структура проекта
 
 ```
@@ -37,8 +39,25 @@
 │       ├── App.js         # Роутинг
 │       ├── store.js       # Redux store (redux-thunk)
 │       └── index.js       # Точка входа
+├── mcp-features/        # MCP-сервер управления feature flags
+├── mcp-rag/             # MCP-сервер семантического поиска по документации
+│   ├── index.js         #   MCP-сервер: tool search_project_docs + resource proshop-docs-index
+│   ├── ingest.js        #   Ingest pipeline: чанкинг → Cohere embeddings → Qdrant upsert
+│   └── package.json
+├── project-data/        # Markdown-документация проекта (индексируется RAG)
+│   ├── adrs/            #   Architecture Decision Records
+│   ├── api/             #   API-документация
+│   ├── features/        #   Описания фич
+│   ├── incidents/       #   Runbooks инцидентов
+│   ├── pages/           #   Описания страниц
+│   ├── runbooks/        #   Операционные runbooks
+│   └── *.md             #   Архитектура, best practices, глоссарий и т.д.
+├── docs/
+│   └── rag/
+│       ├── docker_qdrant.sh   # Скрипт запуска Qdrant с персистентным томом
+│       └── qdrant-data/       # Данные Qdrant (в .gitignore)
 ├── uploads/             # Загруженные изображения товаров
-├── docs/                # Документация
+├── .mcp.json            # Регистрация MCP-серверов (features, proshop-rag)
 ├── CLAUDE.md            # Правила для AI-ассистента
 └── package.json         # Root: backend deps + concurrently-скрипты
 ```
@@ -142,6 +161,8 @@ PAYPAL_CLIENT_ID=your_paypal_client_id
 | `MONGO_URI` | `config/db.js` | Строка подключения к MongoDB (обязательно с `mongodb://` или `mongodb+srv://`) |
 | `JWT_SECRET` | `utils/generateToken.js`, `authMiddleware.js` | Секрет для подписи JWT-токенов |
 | `PAYPAL_CLIENT_ID` | `server.js` → `/api/config/paypal` | Client ID из PayPal Developer Dashboard (sandbox или live) |
+| `COHERE_API_KEY` | `mcp-rag/ingest.js`, `mcp-rag/index.js` | API-ключ Cohere для генерации эмбеддингов. **Обязателен для RAG.** |
+| `QDRANT_URL` | `mcp-rag/ingest.js`, `mcp-rag/index.js` | URL Qdrant. Дефолт: `http://localhost:6333` |
 
 #### Установка зависимостей
 
@@ -273,6 +294,77 @@ import Product from '../models/productModel.js'
 // Неправильно — ошибка
 import Product from '../models/productModel'
 ```
+
+## RAG — семантический поиск по документации
+
+Система позволяет AI-ассистенту (Claude Code) искать информацию в `project-data/` через MCP-инструмент `search_project_docs`.
+
+### Компоненты
+
+| Компонент | Что делает |
+|---|---|
+| **Qdrant** | Векторная БД, хранит эмбеддинги чанков. Запускается через Docker. |
+| **Cohere** | Генерирует 1024-мерные мультиязычные эмбеддинги (`embed-multilingual-v3.0`). |
+| **`mcp-rag/ingest.js`** | Читает все `.md` из `project-data/`, режет на чанки, загружает в Qdrant. |
+| **`mcp-rag/index.js`** | MCP-сервер с инструментом поиска и ресурсом-индексом. |
+
+### Настройка
+
+#### 1. Добавьте переменные в `.env`
+
+```
+COHERE_API_KEY=your_cohere_api_key
+QDRANT_URL=http://localhost:6333
+```
+
+Ключ Cohere: [dashboard.cohere.com](https://dashboard.cohere.com) → API Keys.
+
+#### 2. Запустите Qdrant
+
+```bash
+bash docs/rag/docker_qdrant.sh
+```
+
+Данные сохраняются в `docs/rag/qdrant-data/` (персистентный том, в `.gitignore`).
+
+#### 3. Установите зависимости и проиндексируйте документы
+
+```bash
+cd mcp-rag && npm install
+node ingest.js
+```
+
+Вывод: `N vectors indexed in 'proshop_docs'`. Повторный запуск полностью переиндексирует коллекцию (идемпотентно).
+
+#### 4. MCP-сервер стартует автоматически
+
+`proshop-rag` зарегистрирован в `.mcp.json` — Claude Code запускает его при открытии проекта.
+
+### Использование
+
+Задайте вопрос Claude Code на русском или английском:
+
+- *«Как задеплоить приложение в production?»*
+- *«Почему выбрали MongoDB вместо PostgreSQL?»*
+- *«Как работает feature flag `dark_mode`?»*
+
+Claude автоматически вызовет `search_project_docs` и ответит на основе документации проекта.
+
+### Структура `project-data/`
+
+Тип чанка определяется по директории:
+
+| Путь | Тип |
+|---|---|
+| `runbooks/` | `runbook` |
+| `incidents/` | `incident` |
+| `adrs/` | `adr` |
+| `features/` | `feature` |
+| `api/` | `api` |
+| `pages/` | `page` |
+| остальное | `doc` |
+
+---
 
 ## Feature Flags
 
