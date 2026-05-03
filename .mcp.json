@@ -3,6 +3,10 @@
     "features": {
       "command": "node",
       "args": ["mcp-features/index.js"]
+    },
+    "proshop-rag": {
+      "command": "node",
+      "args": ["mcp-rag/index.js"]
     }
   }
 }
