@@ -1,50 +1,58 @@
 import React from 'react'
-import { Nav } from 'react-bootstrap'
-import { LinkContainer } from 'react-router-bootstrap'
+import { Link } from 'react-router-dom'
+import { useSelector } from 'react-redux'
+import Icon from './Icon'
 
-const CheckoutSteps = ({ step1, step2, step3, step4 }) => {
+const STEPS = [
+  { key: 'step1', label: 'Sign in', to: '/login' },
+  { key: 'step2', label: 'Shipping', to: '/shipping' },
+  { key: 'step3', label: 'Payment', to: '/payment' },
+  { key: 'step4', label: 'Place order', to: '/placeorder' },
+]
+
+const CheckoutSteps = (props) => {
+  const { userInfo } = useSelector((s) => s.userLogin)
+  const enabledFlags = STEPS.map((s) => Boolean(props[s.key]))
+  const currentIdx = enabledFlags.lastIndexOf(true)
+
   return (
-    <Nav className='justify-content-center mb-4'>
-      <Nav.Item>
-        {step1 ? (
-          <LinkContainer to='/login'>
-            <Nav.Link>Sign In</Nav.Link>
-          </LinkContainer>
-        ) : (
-          <Nav.Link disabled>Sign In</Nav.Link>
-        )}
-      </Nav.Item>
-
-      <Nav.Item>
-        {step2 ? (
-          <LinkContainer to='/shipping'>
-            <Nav.Link>Shipping</Nav.Link>
-          </LinkContainer>
-        ) : (
-          <Nav.Link disabled>Shipping</Nav.Link>
-        )}
-      </Nav.Item>
-
-      <Nav.Item>
-        {step3 ? (
-          <LinkContainer to='/payment'>
-            <Nav.Link>Payment</Nav.Link>
-          </LinkContainer>
-        ) : (
-          <Nav.Link disabled>Payment</Nav.Link>
-        )}
-      </Nav.Item>
-
-      <Nav.Item>
-        {step4 ? (
-          <LinkContainer to='/placeorder'>
-            <Nav.Link>Place Order</Nav.Link>
-          </LinkContainer>
-        ) : (
-          <Nav.Link disabled>Place Order</Nav.Link>
-        )}
-      </Nav.Item>
-    </Nav>
+    <nav className='ps-stepper' aria-label='Checkout progress'>
+      {STEPS.map((s, i) => {
+        const enabled = enabledFlags[i]
+        const isCurrent = i === currentIdx
+        const isDone = enabled && i < currentIdx
+        const cls = `ps-step${isCurrent ? ' is-current' : ''}${isDone ? ' is-done' : ''}`
+        // Sign-in step becomes static once user authenticated — clicking /login
+        // when already logged in bounces to home and wipes checkout progress.
+        const isSignInDone = s.to === '/login' && userInfo
+        const linkable = enabled && !isSignInDone
+        const inner = (
+          <>
+            <span className='ps-step-num' aria-hidden='true'>
+              {isDone || isSignInDone ? <Icon name='check' size={14} /> : i + 1}
+            </span>
+            <span>{s.label}</span>
+          </>
+        )
+        return (
+          <React.Fragment key={s.key}>
+            {linkable ? (
+              <Link to={s.to} className={cls} aria-current={isCurrent ? 'step' : undefined}>
+                {inner}
+              </Link>
+            ) : (
+              <span
+                className={`${cls}${isSignInDone ? ' is-done' : ''}`}
+                aria-disabled='true'
+              >
+                {inner}
+              </span>
+            )}
+            {i < STEPS.length - 1 && <span className='ps-step-line' aria-hidden='true' />}
+          </React.Fragment>
+        )
+      })}
+    </nav>
   )
 }
 

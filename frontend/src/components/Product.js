@@ -1,32 +1,30 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Card } from 'react-bootstrap'
 import Rating from './Rating'
 
 const Product = ({ product }) => {
+  const outOfStock = product.countInStock === 0
   return (
-    <Card className='my-3 p-3 rounded'>
-      <Link to={`/product/${product._id}`}>
-        <Card.Img src={product.image} variant='top' />
+    <article className='ps-product-card'>
+      <Link to={`/product/${product._id}`} aria-label={product.name} style={{ display: 'block' }}>
+        <img
+          className='ps-product-img'
+          src={product.image}
+          alt={product.name}
+          loading='lazy'
+        />
       </Link>
-
-      <Card.Body>
-        <Link to={`/product/${product._id}`}>
-          <Card.Title as='div'>
-            <strong>{product.name}</strong>
-          </Card.Title>
+      <div className='ps-product-body'>
+        <Link to={`/product/${product._id}`} className='ps-product-title'>
+          {product.name}
         </Link>
-
-        <Card.Text as='div'>
-          <Rating
-            value={product.rating}
-            text={`${product.numReviews} reviews`}
-          />
-        </Card.Text>
-
-        <Card.Text as='h3'>${product.price}</Card.Text>
-      </Card.Body>
-    </Card>
+        <Rating value={product.rating} text={`${product.numReviews} reviews`} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span className='ps-product-price'>${product.price}</span>
+          {outOfStock && <span className='ps-badge ps-badge--danger'>Out of stock</span>}
+        </div>
+      </div>
+    </article>
   )
 }
 

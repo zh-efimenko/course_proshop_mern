@@ -1,5 +1,5 @@
 import React from 'react'
-import { ProgressBar } from 'react-bootstrap'
+import Icon from './Icon'
 
 const STEPS = [
   { key: 'shipping', label: 'Shipping' },
@@ -9,44 +9,43 @@ const STEPS = [
 
 const CheckoutStepperV2 = ({ currentStep, onStepClick }) => {
   const stepIndex = STEPS.findIndex((s) => s.key === currentStep)
-  const progress = ((stepIndex + 1) / STEPS.length) * 100
-
   return (
-    <div className='checkout-stepper-v2 mb-4'>
-      <ProgressBar
-        now={progress}
-        className='checkout-stepper-v2__progress'
-      />
-      <div className='checkout-stepper-v2__steps d-flex justify-content-between mt-2'>
-        {STEPS.map((step, index) => {
-          const isCompleted = index < stepIndex
-          const isCurrent = index === stepIndex
-          return (
-            <div
-              key={step.key}
-              className={`checkout-stepper-v2__step ${
-                isCurrent ? 'current' : isCompleted ? 'completed' : ''
-              }`}
-              role='button'
-              tabIndex={0}
-              onClick={() => isCompleted && onStepClick(step.key)}
-              onKeyDown={(e) =>
-                isCompleted && e.key === 'Enter' && onStepClick(step.key)
-              }
-            >
-              <div className='checkout-stepper-v2__circle'>
-                {isCompleted ? (
-                  <i className='fas fa-check'></i>
-                ) : (
-                  index + 1
-                )}
-              </div>
-              <span className='checkout-stepper-v2__label'>{step.label}</span>
-            </div>
-          )
-        })}
-      </div>
-    </div>
+    <nav className='ps-stepper' aria-label='Checkout progress'>
+      {STEPS.map((step, index) => {
+        const isCompleted = index < stepIndex
+        const isCurrent = index === stepIndex
+        const clickable = isCompleted && onStepClick
+        const cls = `ps-step${isCurrent ? ' is-current' : ''}${isCompleted ? ' is-done' : ''}`
+        const inner = (
+          <>
+            <span className='ps-step-num' aria-hidden='true'>
+              {isCompleted ? <Icon name='check' size={14} /> : index + 1}
+            </span>
+            <span>{step.label}</span>
+          </>
+        )
+        return (
+          <React.Fragment key={step.key}>
+            {clickable ? (
+              <button
+                type='button'
+                className={cls}
+                onClick={() => onStepClick(step.key)}
+                style={{ border: 0, background: 'transparent', cursor: 'pointer' }}
+                aria-current={isCurrent ? 'step' : undefined}
+              >
+                {inner}
+              </button>
+            ) : (
+              <span className={cls} aria-current={isCurrent ? 'step' : undefined}>
+                {inner}
+              </span>
+            )}
+            {index < STEPS.length - 1 && <span className='ps-step-line' aria-hidden='true' />}
+          </React.Fragment>
+        )
+      })}
+    </nav>
   )
 }
 

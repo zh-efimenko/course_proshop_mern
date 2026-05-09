@@ -1,16 +1,11 @@
 import React from 'react'
-import { Container, Row, Col } from 'react-bootstrap'
 
-const Footer = () => {
-  return (
-    <footer>
-      <Container>
-        <Row>
-          <Col className='text-center py-3'>Copyright &copy; ProShop</Col>
-        </Row>
-      </Container>
-    </footer>
-  )
-}
+const Footer = () => (
+  <footer className='ps-footer' role='contentinfo'>
+    <div className='ps-container'>
+      &copy; {new Date().getFullYear()} ProShop · Built for the curious shopper
+    </div>
+  </footer>
+)
 
 export default Footer

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, Row, Col, ListGroup, Image, Card, Form } from 'react-bootstrap'
 import { useDispatch, useSelector } from 'react-redux'
 import Message from '../components/Message'
 import CheckoutSteps from '../components/CheckoutSteps'
@@ -11,22 +10,16 @@ import useFeatureEnabled from '../hooks/useFeatureEnabled'
 
 const PlaceOrderScreen = ({ history }) => {
   const dispatch = useDispatch()
-
   const [isGift, setIsGift] = useState(false)
   const [giftMessage, setGiftMessage] = useState('')
 
   const giftMessageEnabled = useFeatureEnabled('gift_message')
   const multiStepCheckoutEnabled = useFeatureEnabled('multi_step_checkout_v2')
-
-  const cart = useSelector((state) => state.cart)
-
-  const orderCreate = useSelector((state) => state.orderCreate)
-  const { order, success, error } = orderCreate
+  const cart = useSelector((s) => s.cart)
+  const { order, success, error } = useSelector((s) => s.orderCreate)
 
   useEffect(() => {
-    if (multiStepCheckoutEnabled) {
-      history.push('/checkout')
-    }
+    if (multiStepCheckoutEnabled) history.push('/checkout')
   }, [multiStepCheckoutEnabled, history])
 
   useEffect(() => {
@@ -39,186 +32,124 @@ const PlaceOrderScreen = ({ history }) => {
   }, [history, success])
 
   useEffect(() => {
-    if (!giftMessageEnabled) {
-      setIsGift(false)
-      setGiftMessage('')
-    }
+    if (!giftMessageEnabled) { setIsGift(false); setGiftMessage('') }
   }, [giftMessageEnabled])
 
-  if (multiStepCheckoutEnabled) {
-    return null
-  }
+  if (multiStepCheckoutEnabled) return null
+  if (!cart.shippingAddress.address) { history.push('/shipping'); return null }
+  if (!cart.paymentMethod) { history.push('/payment'); return null }
 
-  if (!cart.shippingAddress.address) {
-    history.push('/shipping')
-  } else if (!cart.paymentMethod) {
-    history.push('/payment')
-  }
-
-  const addDecimals = (num) => {
-    return (Math.round(num * 100) / 100).toFixed(2)
-  }
-
-  cart.itemsPrice = addDecimals(
-    cart.cartItems.reduce((acc, item) => acc + item.price * item.qty, 0)
-  )
-  cart.shippingPrice = addDecimals(cart.itemsPrice > 100 ? 0 : 100)
-  cart.taxPrice = addDecimals(Number((0.15 * cart.itemsPrice).toFixed(2)))
-  cart.totalPrice = (
-    Number(cart.itemsPrice) +
-    Number(cart.shippingPrice) +
-    Number(cart.taxPrice)
-  ).toFixed(2)
+  const fmt = (n) => (Math.round(n * 100) / 100).toFixed(2)
+  cart.itemsPrice = fmt(cart.cartItems.reduce((acc, it) => acc + it.price * it.qty, 0))
+  cart.shippingPrice = fmt(cart.itemsPrice > 100 ? 0 : 100)
+  cart.taxPrice = fmt(Number((0.15 * cart.itemsPrice).toFixed(2)))
+  cart.totalPrice = (Number(cart.itemsPrice) + Number(cart.shippingPrice) + Number(cart.taxPrice)).toFixed(2)
 
   const placeOrderHandler = () => {
-    dispatch(
-      createOrder({
-        orderItems: cart.cartItems,
-        shippingAddress: cart.shippingAddress,
-        paymentMethod: cart.paymentMethod,
-        itemsPrice: cart.itemsPrice,
-        shippingPrice: cart.shippingPrice,
-        taxPrice: cart.taxPrice,
-        totalPrice: cart.totalPrice,
-        giftMessage: isGift ? giftMessage.trim() : '',
-      })
-    )
+    dispatch(createOrder({
+      orderItems: cart.cartItems,
+      shippingAddress: cart.shippingAddress,
+      paymentMethod: cart.paymentMethod,
+      itemsPrice: cart.itemsPrice,
+      shippingPrice: cart.shippingPrice,
+      taxPrice: cart.taxPrice,
+      totalPrice: cart.totalPrice,
+      giftMessage: isGift ? giftMessage.trim() : '',
+    }))
   }
 
+  const Row = ({ label, value, strong }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontWeight: strong ? 600 : 400 }}>
+      <span>{label}</span>
+      <span className='ps-mono'>{value}</span>
+    </div>
+  )
+
   return (
-    <>
+    <div className='ps-container' style={{ paddingTop: 32, paddingBottom: 64 }}>
       <CheckoutSteps step1 step2 step3 step4 />
-      <Row>
-        <Col md={8}>
-          <ListGroup variant='flush'>
-            <ListGroup.Item>
-              <h2>Shipping</h2>
-              <p>
-                <strong>Address:</strong>
-                {cart.shippingAddress.address}, {cart.shippingAddress.city}{' '}
-                {cart.shippingAddress.postalCode},{' '}
-                {cart.shippingAddress.country}
-              </p>
-            </ListGroup.Item>
+      <h1 style={{ marginBottom: 24 }}>Review your order</h1>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(280px, 1fr)', gap: 32, alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <section className='ps-card'>
+            <h3 style={{ marginBottom: 8 }}>Shipping</h3>
+            <p style={{ margin: 0, color: 'var(--fg-secondary)' }}>
+              {cart.shippingAddress.address}, {cart.shippingAddress.city} {cart.shippingAddress.postalCode}, {cart.shippingAddress.country}
+            </p>
+          </section>
 
-            <ListGroup.Item>
-              <h2>Payment Method</h2>
-              <strong>Method: </strong>
-              {cart.paymentMethod}
-            </ListGroup.Item>
+          <section className='ps-card'>
+            <h3 style={{ marginBottom: 8 }}>Payment</h3>
+            <p style={{ margin: 0, color: 'var(--fg-secondary)' }}>{cart.paymentMethod}</p>
+          </section>
 
-            <ListGroup.Item>
-              <h2>Order Items</h2>
-              {cart.cartItems.length === 0 ? (
-                <Message>Your cart is empty</Message>
-              ) : (
-                <ListGroup variant='flush'>
-                  {cart.cartItems.map((item, index) => (
-                    <ListGroup.Item key={index}>
-                      <Row>
-                        <Col md={1}>
-                          <Image
-                            src={item.image}
-                            alt={item.name}
-                            fluid
-                            rounded
-                          />
-                        </Col>
-                        <Col>
-                          <Link to={`/product/${item.product}`}>
-                            {item.name}
-                          </Link>
-                        </Col>
-                        <Col md={4}>
-                          {item.qty} x ${item.price} = ${item.qty * item.price}
-                        </Col>
-                      </Row>
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
-              )}
-            </ListGroup.Item>
-            {giftMessageEnabled && (
-              <ListGroup.Item>
-                <Form.Group controlId='isGift' className='mb-0'>
-                  <Form.Check
-                    type='checkbox'
-                    label='This is a gift order'
-                    checked={isGift}
-                    onChange={(e) => {
-                      setIsGift(e.target.checked)
-                      if (!e.target.checked) setGiftMessage('')
-                    }}
-                  />
-                </Form.Group>
-                {isGift && (
-                  <Form.Group controlId='giftMessage' className='mt-2 mb-0'>
-                    <Form.Label>Gift Message</Form.Label>
-                    <Form.Control
-                      as='textarea'
-                      rows={3}
-                      maxLength={200}
-                      value={giftMessage}
-                      onChange={(e) => setGiftMessage(e.target.value)}
-                      placeholder='Add a personal message...'
-                    />
-                    <Form.Text className='text-muted'>
-                      {giftMessage.length}/200
-                    </Form.Text>
-                  </Form.Group>
-                )}
-              </ListGroup.Item>
+          <section className='ps-card'>
+            <h3 style={{ marginBottom: 16 }}>Order items</h3>
+            {cart.cartItems.length === 0 ? (
+              <Message>Your cart is empty</Message>
+            ) : (
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                {cart.cartItems.map((item, idx) => (
+                  <li key={idx} style={{ display: 'grid', gridTemplateColumns: '64px 1fr auto', gap: 12, alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+                    <img src={item.image} alt={item.name} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 'var(--radius-md)', background: 'var(--surface-alt)' }} />
+                    <Link to={`/product/${item.product}`}>{item.name}</Link>
+                    <span className='ps-mono'>{item.qty} × ${item.price} = ${(item.qty * item.price).toFixed(2)}</span>
+                  </li>
+                ))}
+              </ul>
             )}
-          </ListGroup>
-        </Col>
-        <Col md={4}>
-          <Card>
-            <ListGroup variant='flush'>
-              <ListGroup.Item>
-                <h2>Order Summary</h2>
-              </ListGroup.Item>
-              <ListGroup.Item>
-                <Row>
-                  <Col>Items</Col>
-                  <Col>${cart.itemsPrice}</Col>
-                </Row>
-              </ListGroup.Item>
-              <ListGroup.Item>
-                <Row>
-                  <Col>Shipping</Col>
-                  <Col>${cart.shippingPrice}</Col>
-                </Row>
-              </ListGroup.Item>
-              <ListGroup.Item>
-                <Row>
-                  <Col>Tax</Col>
-                  <Col>${cart.taxPrice}</Col>
-                </Row>
-              </ListGroup.Item>
-              <ListGroup.Item>
-                <Row>
-                  <Col>Total</Col>
-                  <Col>${cart.totalPrice}</Col>
-                </Row>
-              </ListGroup.Item>
-              <ListGroup.Item>
-                {error && <Message variant='danger'>{error}</Message>}
-              </ListGroup.Item>
-              <ListGroup.Item>
-                <Button
-                  type='button'
-                  className='btn-block'
-                  disabled={cart.cartItems === 0}
-                  onClick={placeOrderHandler}
-                >
-                  Place Order
-                </Button>
-              </ListGroup.Item>
-            </ListGroup>
-          </Card>
-        </Col>
-      </Row>
-    </>
+          </section>
+
+          {giftMessageEnabled && (
+            <section className='ps-card'>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type='checkbox'
+                  checked={isGift}
+                  onChange={(e) => { setIsGift(e.target.checked); if (!e.target.checked) setGiftMessage('') }}
+                />
+                <span style={{ fontWeight: 500 }}>This is a gift</span>
+              </label>
+              {isGift && (
+                <div className='ps-field' style={{ marginTop: 12 }}>
+                  <label htmlFor='gift-msg' className='ps-label'>Gift message</label>
+                  <textarea
+                    id='gift-msg'
+                    className='ps-textarea'
+                    rows='3'
+                    maxLength={200}
+                    value={giftMessage}
+                    onChange={(e) => setGiftMessage(e.target.value)}
+                    placeholder='Add a personal message…'
+                  />
+                  <p className='ps-help'>{giftMessage.length}/200</p>
+                </div>
+              )}
+            </section>
+          )}
+        </div>
+
+        <aside className='ps-card ps-card--alt' style={{ position: 'sticky', top: 80 }} aria-labelledby='summary-h'>
+          <h2 id='summary-h' style={{ marginBottom: 16 }}>Order summary</h2>
+          <Row label='Items' value={`$${cart.itemsPrice}`} />
+          <Row label='Shipping' value={`$${cart.shippingPrice}`} />
+          <Row label='Tax' value={`$${cart.taxPrice}`} />
+          <div style={{ borderTop: '1px solid var(--border-strong)', marginTop: 8, paddingTop: 8 }}>
+            <Row label='Total' value={`$${cart.totalPrice}`} strong />
+          </div>
+          {error && <div style={{ marginTop: 12 }}><Message variant='danger'>{error}</Message></div>}
+          <button
+            type='button'
+            className='ps-btn ps-btn-primary ps-btn-block ps-btn-lg'
+            style={{ marginTop: 16 }}
+            disabled={cart.cartItems.length === 0}
+            onClick={placeOrderHandler}
+          >
+            Place order
+          </button>
+        </aside>
+      </div>
+    </div>
   )
 }
 

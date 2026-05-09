@@ -1,16 +1,11 @@
 import React from 'react'
-import { Container, Row, Col } from 'react-bootstrap'
 
-const FormContainer = ({ children }) => {
-  return (
-    <Container>
-      <Row className='justify-content-md-center'>
-        <Col xs={12} md={6}>
-          {children}
-        </Col>
-      </Row>
-    </Container>
-  )
-}
+const FormContainer = ({ children, narrow = false }) => (
+  <div className='ps-container' style={{ paddingTop: 32 }}>
+    <div style={{ maxWidth: narrow ? 420 : 480, margin: '0 auto' }}>
+      {children}
+    </div>
+  </div>
+)
 
 export default FormContainer

@@ -1,21 +1,15 @@
 import React from 'react'
-import { Spinner } from 'react-bootstrap'
 
-const Loader = () => {
-  return (
-    <Spinner
-      animation='border'
-      role='status'
-      style={{
-        width: '100px',
-        height: '100px',
-        margin: 'auto',
-        display: 'block',
-      }}
-    >
-      <span className='sr-only'>Loading...</span>
-    </Spinner>
-  )
-}
+const Loader = ({ inline = false, label = 'Loading' }) => (
+  <span
+    role='status'
+    aria-live='polite'
+    className={inline ? 'ps-loader' : 'ps-loader ps-loader--block'}
+  >
+    <span style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>
+      {label}
+    </span>
+  </span>
+)
 
 export default Loader

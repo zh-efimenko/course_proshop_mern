@@ -1,169 +1,174 @@
 import React, { useState, useEffect } from 'react'
-import { Table, Form, Button, Row, Col } from 'react-bootstrap'
-import { LinkContainer } from 'react-router-bootstrap'
+import { Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import Message from '../components/Message'
 import Loader from '../components/Loader'
+import Icon from '../components/Icon'
 import { getUserDetails, updateUserProfile } from '../actions/userActions'
 import { listMyOrders } from '../actions/orderActions'
 import { USER_UPDATE_PROFILE_RESET } from '../constants/userConstants'
 
-const ProfileScreen = ({ location, history }) => {
+const ProfileScreen = ({ history }) => {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [message, setMessage] = useState(null)
-
   const dispatch = useDispatch()
 
-  const userDetails = useSelector((state) => state.userDetails)
-  const { loading, error, user } = userDetails
-
-  const userLogin = useSelector((state) => state.userLogin)
-  const { userInfo } = userLogin
-
-  const userUpdateProfile = useSelector((state) => state.userUpdateProfile)
-  const { success } = userUpdateProfile
-
-  const orderListMy = useSelector((state) => state.orderListMy)
-  const { loading: loadingOrders, error: errorOrders, orders } = orderListMy
+  const { loading, error, user } = useSelector((s) => s.userDetails)
+  const { userInfo } = useSelector((s) => s.userLogin)
+  const { success } = useSelector((s) => s.userUpdateProfile)
+  const { loading: loadingOrders, error: errorOrders, orders } = useSelector((s) => s.orderListMy)
 
   useEffect(() => {
     if (!userInfo) {
       history.push('/login')
+    } else if (!user || !user.name || success) {
+      dispatch({ type: USER_UPDATE_PROFILE_RESET })
+      dispatch(getUserDetails('profile'))
+      dispatch(listMyOrders())
     } else {
-      if (!user || !user.name || success) {
-        dispatch({ type: USER_UPDATE_PROFILE_RESET })
-        dispatch(getUserDetails('profile'))
-        dispatch(listMyOrders())
-      } else {
-        setName(user.name)
-        setEmail(user.email)
-      }
+      setName(user.name)
+      setEmail(user.email)
     }
   }, [dispatch, history, userInfo, user, success])
 
   const submitHandler = (e) => {
     e.preventDefault()
-    if (password !== confirmPassword) {
+    if (password && password !== confirmPassword) {
       setMessage('Passwords do not match')
     } else {
+      setMessage(null)
       dispatch(updateUserProfile({ id: user._id, name, email, password }))
     }
   }
 
+  const OrdersTableSkeleton = () => (
+    <div style={{ overflowX: 'auto' }} aria-busy='true' aria-live='polite'>
+      <table className='ps-table'>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Date</th>
+            <th className='num'>Total</th>
+            <th>Paid</th>
+            <th>Delivered</th>
+            <th className='actions'>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <tr key={i}>
+              <td><div className='ps-skeleton' style={{ height: 12, width: 60 }} /></td>
+              <td><div className='ps-skeleton' style={{ height: 12, width: 80 }} /></td>
+              <td className='num'><div className='ps-skeleton' style={{ height: 12, width: 60, marginLeft: 'auto' }} /></td>
+              <td><div className='ps-skeleton' style={{ height: 20, width: 90 }} /></td>
+              <td><div className='ps-skeleton' style={{ height: 20, width: 90 }} /></td>
+              <td className='actions'><div className='ps-skeleton' style={{ height: 28, width: 80 }} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+
+  const StatusBadge = ({ done, doneDate, pendingLabel }) =>
+    done ? (
+      <span className='ps-badge ps-badge--success'>
+        <Icon name='check' size={12} /> {doneDate.substring(0, 10)}
+      </span>
+    ) : (
+      <span className='ps-badge ps-badge--warning'>{pendingLabel}</span>
+    )
+
   return (
-    <Row>
-      <Col md={3}>
-        <h2>User Profile</h2>
-        {message && <Message variant='danger'>{message}</Message>}
-        {}
-        {success && <Message variant='success'>Profile Updated</Message>}
-        {loading ? (
-          <Loader />
-        ) : error ? (
-          <Message variant='danger'>{error}</Message>
-        ) : (
-          <Form onSubmit={submitHandler}>
-            <Form.Group controlId='name'>
-              <Form.Label>Name</Form.Label>
-              <Form.Control
-                type='name'
-                placeholder='Enter name'
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              ></Form.Control>
-            </Form.Group>
+    <div className='ps-container' style={{ paddingTop: 32, paddingBottom: 64 }}>
+      <h1 style={{ marginBottom: 24 }}>Account</h1>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 360px) 1fr', gap: 32, alignItems: 'flex-start' }}>
+        <section className='ps-card' aria-labelledby='profile-h'>
+          <h2 id='profile-h' style={{ marginBottom: 16 }}>Profile</h2>
+          {message && <div style={{ marginBottom: 12 }}><Message variant='danger'>{message}</Message></div>}
+          {success && <div style={{ marginBottom: 12 }}><Message variant='success'>Profile updated</Message></div>}
+          {loading ? (
+            <Loader />
+          ) : error ? (
+            <Message variant='danger'>{error}</Message>
+          ) : (
+            <form onSubmit={submitHandler} noValidate>
+              <div className='ps-field'>
+                <label htmlFor='name' className='ps-label'>Name</label>
+                <input id='name' className='ps-input' value={name} onChange={(e) => setName(e.target.value)} required />
+              </div>
+              <div className='ps-field'>
+                <label htmlFor='email' className='ps-label'>Email</label>
+                <input id='email' className='ps-input' type='email' value={email} onChange={(e) => setEmail(e.target.value)} required />
+              </div>
+              <div className='ps-field'>
+                <label htmlFor='password' className='ps-label'>New password</label>
+                <input id='password' className='ps-input' type='password' value={password} onChange={(e) => setPassword(e.target.value)} autoComplete='new-password' />
+                <p className='ps-help'>Leave blank to keep current password.</p>
+              </div>
+              <div className='ps-field'>
+                <label htmlFor='confirm' className='ps-label'>Confirm new password</label>
+                <input id='confirm' className='ps-input' type='password' value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete='new-password' />
+              </div>
+              <button type='submit' className='ps-btn ps-btn-primary'>Save changes</button>
+            </form>
+          )}
+        </section>
 
-            <Form.Group controlId='email'>
-              <Form.Label>Email Address</Form.Label>
-              <Form.Control
-                type='email'
-                placeholder='Enter email'
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              ></Form.Control>
-            </Form.Group>
-
-            <Form.Group controlId='password'>
-              <Form.Label>Password</Form.Label>
-              <Form.Control
-                type='password'
-                placeholder='Enter password'
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              ></Form.Control>
-            </Form.Group>
-
-            <Form.Group controlId='confirmPassword'>
-              <Form.Label>Confirm Password</Form.Label>
-              <Form.Control
-                type='password'
-                placeholder='Confirm password'
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              ></Form.Control>
-            </Form.Group>
-
-            <Button type='submit' variant='primary'>
-              Update
-            </Button>
-          </Form>
-        )}
-      </Col>
-      <Col md={9}>
-        <h2>My Orders</h2>
-        {loadingOrders ? (
-          <Loader />
-        ) : errorOrders ? (
-          <Message variant='danger'>{errorOrders}</Message>
-        ) : (
-          <Table striped bordered hover responsive className='table-sm'>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>DATE</th>
-                <th>TOTAL</th>
-                <th>PAID</th>
-                <th>DELIVERED</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => (
-                <tr key={order._id}>
-                  <td>{order._id}</td>
-                  <td>{order.createdAt.substring(0, 10)}</td>
-                  <td>{order.totalPrice}</td>
-                  <td>
-                    {order.isPaid ? (
-                      order.paidAt.substring(0, 10)
-                    ) : (
-                      <i className='fas fa-times' style={{ color: 'red' }}></i>
-                    )}
-                  </td>
-                  <td>
-                    {order.isDelivered ? (
-                      order.deliveredAt.substring(0, 10)
-                    ) : (
-                      <i className='fas fa-times' style={{ color: 'red' }}></i>
-                    )}
-                  </td>
-                  <td>
-                    <LinkContainer to={`/order/${order._id}`}>
-                      <Button className='btn-sm' variant='light'>
-                        Details
-                      </Button>
-                    </LinkContainer>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        )}
-      </Col>
-    </Row>
+        <section aria-labelledby='orders-h'>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 16 }}>
+            <h2 id='orders-h'>My orders</h2>
+            {orders && <span className='ps-caption'>{orders.length}</span>}
+          </div>
+          {loadingOrders ? (
+            <OrdersTableSkeleton />
+          ) : errorOrders ? (
+            <Message variant='danger'>{errorOrders}</Message>
+          ) : !orders || orders.length === 0 ? (
+            <div className='ps-empty'>
+              <span className='ps-empty-icon'><Icon name='inbox' size={40} /></span>
+              <h3>No orders yet</h3>
+              <p>Once you place an order, you'll find it here.</p>
+              <Link to='/' className='ps-btn ps-btn-primary'>Browse products</Link>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table className='ps-table'>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Date</th>
+                    <th className='num'>Total</th>
+                    <th>Paid</th>
+                    <th>Delivered</th>
+                    <th className='actions'>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order._id}>
+                      <td className='ps-mono' style={{ color: 'var(--fg-muted)' }}>{order._id.slice(-6)}</td>
+                      <td>{order.createdAt.substring(0, 10)}</td>
+                      <td className='num'>${order.totalPrice}</td>
+                      <td><StatusBadge done={order.isPaid} doneDate={order.paidAt || ''} pendingLabel='Awaiting payment' /></td>
+                      <td><StatusBadge done={order.isDelivered} doneDate={order.deliveredAt || ''} pendingLabel='In transit' /></td>
+                      <td className='actions'>
+                        <Link to={`/order/${order._id}`} className='ps-btn ps-btn-ghost ps-btn-sm'>
+                          Details <Icon name='arrowRight' size={14} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
   )
 }
 

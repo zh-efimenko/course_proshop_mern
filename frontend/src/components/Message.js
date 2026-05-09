@@ -1,12 +1,21 @@
 import React from 'react'
-import { Alert } from 'react-bootstrap'
+import Icon from './Icon'
 
-const Message = ({ variant, children }) => {
-  return <Alert variant={variant}>{children}</Alert>
+const variantToIcon = {
+  success: 'check',
+  warning: 'alertCircle',
+  danger: 'alertCircle',
+  info: 'alertCircle',
 }
 
-Message.defaultProps = {
-  variant: 'info',
+const Message = ({ variant = 'info', children }) => {
+  const role = variant === 'danger' ? 'alert' : 'status'
+  return (
+    <div className={`ps-alert ps-alert--${variant}`} role={role}>
+      <Icon name={variantToIcon[variant] || 'alertCircle'} size={18} />
+      <div>{children}</div>
+    </div>
+  )
 }
 
 export default Message

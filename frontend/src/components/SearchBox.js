@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react'
-import { Form, Button, ListGroup } from 'react-bootstrap'
+import React, { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
+import Icon from './Icon'
 import useFeatureEnabled from '../hooks/useFeatureEnabled'
 
 const SearchBox = ({ history }) => {
   const [keyword, setKeyword] = useState('')
   const [suggestions, setSuggestions] = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1)
+  const wrapRef = useRef(null)
 
   const autosuggestEnabled = useFeatureEnabled('search_autosuggest')
 
@@ -23,6 +25,7 @@ const SearchBox = ({ history }) => {
         })
         setSuggestions(data)
         setShowDropdown(data.length > 0)
+        setActiveIndex(-1)
       } catch {
         setSuggestions([])
       }
@@ -30,65 +33,119 @@ const SearchBox = ({ history }) => {
     return () => clearTimeout(timer)
   }, [keyword, autosuggestEnabled])
 
-  const submitHandler = (e) => {
-    e.preventDefault()
-    setShowDropdown(false)
-    if (keyword.trim()) {
-      history.push(`/search/${keyword}`)
-    } else {
-      history.push('/')
+  useEffect(() => {
+    const onClick = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setShowDropdown(false)
+      }
     }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  const navigateTo = (k) => {
+    setShowDropdown(false)
+    if (k && k.trim()) history.push(`/search/${k}`)
+    else history.push('/')
   }
 
-  const suggestionClickHandler = (id) => {
+  const submitHandler = (e) => {
+    e.preventDefault()
+    if (activeIndex >= 0 && suggestions[activeIndex]) {
+      pickSuggestion(suggestions[activeIndex]._id)
+      return
+    }
+    navigateTo(keyword)
+  }
+
+  const pickSuggestion = (id) => {
     setKeyword('')
     setSuggestions([])
     setShowDropdown(false)
     history.push(`/product/${id}`)
   }
 
-  const blurHandler = () => {
-    setTimeout(() => setShowDropdown(false), 150)
+  const onKeyDown = (e) => {
+    if (!showDropdown || suggestions.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex((i) => (i + 1) % suggestions.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex((i) => (i - 1 + suggestions.length) % suggestions.length)
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false)
+    }
   }
 
   return (
-    <Form onSubmit={submitHandler} inline>
-      <div style={{ position: 'relative' }}>
-        <Form.Control
-          type='text'
-          name='q'
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          onBlur={blurHandler}
-          placeholder='Search Products...'
-          className='mr-sm-2 ml-sm-5'
-        ></Form.Control>
-        {showDropdown && suggestions.length > 0 && (
-          <ListGroup
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              zIndex: 1000,
-              width: '300px',
-            }}
-          >
-            {suggestions.map((s) => (
-              <ListGroup.Item
-                key={s._id}
-                action
-                onClick={() => suggestionClickHandler(s._id)}
-              >
-                {s.name}
-              </ListGroup.Item>
-            ))}
-          </ListGroup>
-        )}
-      </div>
-      <Button type='submit' variant='outline-success' className='p-2'>
-        Search
-      </Button>
-    </Form>
+    <form onSubmit={submitHandler} role='search' className='ps-search' ref={wrapRef}>
+      <span className='ps-search-icon' aria-hidden='true'>
+        <Icon name='search' size={18} />
+      </span>
+      <input
+        type='text'
+        name='q'
+        value={keyword}
+        onChange={(e) => setKeyword(e.target.value)}
+        onKeyDown={onKeyDown}
+        placeholder='Search products…'
+        aria-label='Search products'
+        autoComplete='off'
+        role='combobox'
+        aria-autocomplete='list'
+        aria-expanded={showDropdown}
+        aria-controls='ps-search-suggestions'
+        aria-activedescendant={
+          activeIndex >= 0 && suggestions[activeIndex]
+            ? `ps-search-option-${suggestions[activeIndex]._id}`
+            : undefined
+        }
+      />
+      {showDropdown && suggestions.length > 0 && (
+        <ul
+          id='ps-search-suggestions'
+          role='listbox'
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            zIndex: 1000,
+            listStyle: 'none',
+            margin: 0,
+            padding: 4,
+            background: 'var(--surface)',
+            border: '1px solid var(--border-strong)',
+            borderRadius: 'var(--radius-md)',
+          }}
+        >
+          {suggestions.map((s, idx) => (
+            <li
+              key={s._id}
+              id={`ps-search-option-${s._id}`}
+              role='option'
+              aria-selected={idx === activeIndex}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                pickSuggestion(s._id)
+              }}
+              onMouseEnter={() => setActiveIndex(idx)}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 'var(--radius-sm)',
+                cursor: 'pointer',
+                fontSize: 'var(--text-body-sm)',
+                color: 'var(--fg)',
+                background: idx === activeIndex ? 'var(--surface-alt)' : 'transparent',
+              }}
+            >
+              {s.name}
+            </li>
+          ))}
+        </ul>
+      )}
+    </form>
   )
 }
 
