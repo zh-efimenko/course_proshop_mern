@@ -2,6 +2,19 @@
 
 This file provides guidance when working with code in this repository.
 
+## Design System — read before any frontend work
+
+**[DESIGN.md](./DESIGN.md)** is the single source of truth for visual language, component patterns, spacing, typography, color tokens, and interactive states (hover / focus / loading / empty / error). It also encodes the anti-AI-slop guards from `homework/M4` (no Inter, no box-shadows, no `dark:` prefixes, no gradients, no 2-column comparison blocks, semantic tokens only, etc.).
+
+**Read DESIGN.md every time you:**
+- modify anything under `frontend/` (screens, components, styles, hooks that affect UI)
+- propose, sketch, or implement a new design / redesign / visual change
+- add a new screen, card, button, input, badge, modal, or any other UI element
+- touch `frontend/src/index.css`, `bootstrap.min.css` overrides, or any future `tokens.css`
+- review a frontend PR or write a frontend code review
+
+If a code value conflicts with DESIGN.md, **DESIGN.md wins** and the code is wrong — fix the code, do not edit DESIGN.md to match drift. Changes to DESIGN.md itself require an explicit user decision, not a side effect of an implementation task.
+
 ## Commands
 
 ```bash
