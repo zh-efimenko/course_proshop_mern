@@ -83,7 +83,7 @@ const App = () => {
           />
           <Route path='/admin/product/:id/edit' component={ProductEditScreen} />
           <Route path='/admin/orderlist' component={OrderListScreen} />
-          <Route path='/admin/featureflags' component={FeatureFlagsScreen} />
+          <Route path='/admin/featuredashboard' component={FeatureFlagsScreen} />
           <Route path='/admin/reviews' component={ReviewModerationScreen} />
           <Route path='/search/:keyword' component={HomeScreen} exact />
           <Route path='/page/:pageNumber' component={HomeScreen} exact />

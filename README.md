@@ -370,9 +370,9 @@ Claude автоматически вызовет `search_project_docs` и отв
 
 Флаги хранятся в `backend/features.json` (25 штук). При старте приложения они загружаются в Redux (`state.featureFlags`) и доступны во всех компонентах.
 
-**Просмотр:** войти под админом → меню Admin → Feature Flags.
+**Просмотр:** войти под админом → меню Admin → Feature Dashboard (`/admin/featuredashboard`).
 
-**Обновление флага:** отредактировать `backend/features.json` напрямую или через MCP. Изменения вступают в силу после перезагрузки страницы — рестарт сервера не нужен.
+**Обновление флага:** через UI Feature Dashboard (toggle статуса + slider traffic %, пишет в `backend/features.json` через `PATCH /api/featureflags/:key`), либо отредактировать `backend/features.json` напрямую или через MCP. Изменения вступают в силу после перезагрузки страницы — рестарт сервера не нужен.
 
 Структура одного флага:
 

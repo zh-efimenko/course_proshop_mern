@@ -578,7 +578,7 @@ Replace `CheckoutSteps.js` numbered links with the new stepper. Indicate progres
 [ Empty state: relevant icon + CTA ("Add first product") ]
 ```
 
-### 10.8 FeatureFlagsScreen `/admin/featureflags`
+### 10.8 FeatureFlagsScreen `/admin/featuredashboard`
 
 ```
 [ H1 "Feature flags" + count caption ]
