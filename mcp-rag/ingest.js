@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from 'fs'
+import { readFileSync, readdirSync, statSync, writeFileSync } from 'fs'
 import { join, relative, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
@@ -111,6 +111,20 @@ if (process.argv.includes('--test')) {
   console.log(JSON.stringify(chunks[0], null, 2))
 }
 
+// Dump all chunks to JSONL without touching Qdrant/Cohere
+if (process.argv.includes('--dump')) {
+  const idx = process.argv.indexOf('--dump')
+  const outArg = process.argv[idx + 1]
+  const outPath = outArg && !outArg.startsWith('--')
+    ? (outArg.startsWith('/') ? outArg : join(process.cwd(), outArg))
+    : join(__dirname, 'chunks.jsonl')
+  const chunks = buildChunks()
+  const lines = chunks.map(c => JSON.stringify(c)).join('\n') + '\n'
+  writeFileSync(outPath, lines, 'utf-8')
+  console.log(`Wrote ${chunks.length} chunks to ${outPath}`)
+  process.exit(0)
+}
+
 const COLLECTION = 'proshop_docs'
 const VECTOR_SIZE = 1024
 const BATCH_SIZE = 96
@@ -171,6 +185,6 @@ async function main() {
   console.log(`\nDone. ${pointId} vectors indexed in '${COLLECTION}'.`)
 }
 
-if (!process.argv.includes('--test')) {
+if (!process.argv.includes('--test') && !process.argv.includes('--dump')) {
   main().catch(err => { console.error(err); process.exit(1) })
 }

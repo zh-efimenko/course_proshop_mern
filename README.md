@@ -336,6 +336,12 @@ node ingest.js
 
 Вывод: `N vectors indexed in 'proshop_docs'`. Повторный запуск полностью переиндексирует коллекцию (идемпотентно).
 
+Дамп чанков в `mcp-rag/chunks.jsonl` без обращения к Qdrant/Cohere (для ревью качества chunking):
+
+```bash
+cd mcp-rag && node ingest.js --dump
+```
+
 #### 4. MCP-сервер стартует автоматически
 
 `proshop-rag` зарегистрирован в `.mcp.json` — Claude Code запускает его при открытии проекта.

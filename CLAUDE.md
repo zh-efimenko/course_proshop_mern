@@ -44,6 +44,9 @@ cd mcp-rag && node ingest.js
 
 # RAG — smoke-тест чанкера без обращения к Qdrant/Cohere
 cd mcp-rag && node ingest.js --test
+
+# RAG — дамп всех чанков в mcp-rag/chunks.jsonl (без Qdrant/Cohere), опц. путь: --dump path/to/file.jsonl
+cd mcp-rag && node ingest.js --dump
 ```
 
 No test framework is configured.
@@ -116,6 +119,7 @@ Port 5001 instead of 5000 — macOS AirPlay Receiver occupies 5000.
 - RAG ingest is idempotent — каждый запуск удаляет и пересоздаёт коллекцию `proshop_docs`. Запускать после добавления новых `.md` файлов в `project-data/`.
 - RAG MCP сервер (`proshop-rag`) автостартует через `.mcp.json`. Если Qdrant не запущен или коллекция не проиндексирована — инструмент вернёт `isError: true` с понятным сообщением.
 - Чанкер `ingest.js` экспортирует `buildChunks()` — можно импортировать отдельно без запуска full ingest pipeline (используй `--test` флаг для smoke-теста).
+- `mcp-rag/ingest.js --dump [path]` — дамп всех чанков в JSONL без обращения к Qdrant/Cohere. Дефолтный путь — `mcp-rag/chunks.jsonl`. Файл закоммичен в репо для ревью качества chunking без поднятия инфраструктуры. Перегенерировать после изменения `project-data/` или логики чанкера.
 
 ## Commit Conventions
 
