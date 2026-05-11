@@ -228,6 +228,37 @@ Examples:
   },
 )
 
+// ─── Tool 4: list_features ──────────────────────────────────────────────────
+
+server.tool(
+  'list_features',
+  `Return the full catalogue of feature flags with their descriptions and current state. Read-only.
+
+Use this as the first step when the user asks "what feature flags exist", "show me all features", or when you need to discover the snake_case feature_id of a flag mentioned by its human name (e.g. "dark mode" → "dark_mode").
+
+Prefer this tool over reading or grepping backend/features.json directly — it keeps the tool-call log consistent and applies the canonical response shape.
+
+For inspecting a single flag in depth (including dependencies_status), use get_feature_info instead.
+
+No input parameters.
+
+Returns: an array of feature objects, each with feature_id, name, description, status, traffic_percentage, last_modified, implemented, and (when present) targeted_segments / rollout_strategy / dependencies.`,
+  {},
+  async () => {
+    let features
+    try { features = readFeatures() } catch (err) {
+      return { content: [{ type: 'text', text: JSON.stringify(err) }], isError: true }
+    }
+
+    const list = Object.entries(features).map(([id, f]) => ({
+      ...makeResponse(id, f),
+      implemented: f.implemented,
+    }))
+
+    return { content: [{ type: 'text', text: JSON.stringify(list, null, 2) }] }
+  },
+)
+
 // ─── Resource: all feature flags ────────────────────────────────────────────
 
 server.resource(
