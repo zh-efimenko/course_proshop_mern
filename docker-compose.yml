@@ -60,6 +60,20 @@ services:
       - mcp-features
     restart: unless-stopped
 
+  logs-server:
+    image: python:3.12-alpine
+    command: python3 -m http.server 8080 --directory /logs
+    volumes:
+      - ./homework/M5/logs.json:/logs/logs.json:ro
+    restart: unless-stopped
+
+  logs-tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://logs-server:8080
+    depends_on:
+      - logs-server
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend
