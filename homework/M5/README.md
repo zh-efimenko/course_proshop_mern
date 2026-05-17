@@ -401,7 +401,62 @@ watch -n 5 'cat ../../backend/features.json | python3 -c "import json,sys; d=jso
 
 ---
 
+## Что было сложно
+
+Суммарно домашка заняла ~15 часов, из них 12–13 ушло на ручную настройку workflow в n8n. Версия n8n отличалась от описания задания, формулировки местами неудобные — много времени потратил, выясняя через LLM и агентов, как правильно настраивать конкретные ноды. Закончились дефолтные LLM-токены в n8n.cloud — пришлось подключать собственный Anthropic API-ключ. Cloudflare quick tunnel — URL эфемерный, после каждого `docker compose restart` приходилось руками править host в MCP-нодах и `GET Logs` ноде WF2.
+
+**Вывод по агентной автогенерации:** прогнал цепочку `orchestrator → spec → builder` только для WF1 — чтобы понять механику end-to-end (user story → YAML spec → валидный n8n JSON → импорт → работающий execution). На WF2 повторять не стал: суть подхода ясна, выигрыша над уже собранным вручную workflow нет, время дороже.
+
+---
+
 ## Скриншоты
 
 - WF1 — `homework/M5/screenshots_wf1/`
 - WF2 — `homework/M5/screenshots_wf2/`
+- WF1 (agentic build) — `homework/M5/screenshots_wf1_cc/`
+
+## Скринкасты
+
+Видео-демо работы фич — `homework/M5/screencasts/`:
+
+| Файл | Что показано |
+|------|--------------|
+| `wf1-autopilots-components.mov` | AutoPilot панель на странице Feature Flags: 3 кнопки (Run check / Testing mode / Rollback), реакция UI на ответ n8n |
+| `wf1-stress-test-reload-UI-after-n8n-changed.mov` | стресс-тест WF1: симулятор шлёт burst запросов, UI перезагружается и подтягивает новое состояние флага из `features.json` |
+| `wf1-halucinations.mov` | hallucination test: невалидные payload-ы (`traffic_percentage=-50`) отклоняются Switch-нодой с 400, AI Agent не запускается |
+
+---
+
+## WF1 через агентов (n8n-requirements-orchestrator + n8n-workflow-builder)
+
+WF1 дополнительно собран автоматически через цепочку из двух кастомных Claude-Code субагентов (см. `.claude/agents/`):
+
+1. **`n8n-requirements-orchestrator`** — интерактивный диалог: из абстрактной user story («AutoPilot для feature flags») вытащил уточнения по триггеру, auth, MCP-инструментам, валидации, формату ответа и edge-кейсам. Output — структурированный spec `homework/M5/wf1-spec-cc.yaml` (трigger → IF validate → AI Agent + 3 MCP tools → Respond to Webhook, unified response contract).
+2. **`n8n-workflow-builder`** — принял spec и сгенерировал валидный n8n JSON `homework/M5/wf1-manual-trigger-cc.json`: канонические типы нод, корректные `typeVersion`, sub-node связки (AI Agent ↔ Chat Model ↔ Memory ↔ Tools), credential placeholders.
+
+### Файлы
+
+| Файл | Роль |
+|------|------|
+| `.claude/agents/n8n-requirements-orchestrator.md` | агент 1 — user story → spec |
+| `.claude/agents/n8n-workflow-builder.md` | агент 2 — spec → n8n JSON |
+| `homework/M5/wf1-spec-cc.yaml` | детальный workflow spec (output агента 1) |
+| `homework/M5/wf1-manual-trigger-cc.json` | импортируемый n8n workflow (output агента 2) |
+| `homework/M5/screenshots_wf1_cc/Screenshot 2026-05-17 at 10.50.51.png` | пруф: workflow импортирован в n8n и успешно отрабатывает execution |
+
+### Пруф работоспособности
+
+Скриншот `homework/M5/screenshots_wf1_cc/Screenshot 2026-05-17 at 10.50.51.png` — сгенерированный агентами JSON импортирован в n8n, Workflow Execution отработал успешно: webhook принял запрос, IF-валидатор пропустил payload, AI Agent вызвал MCP-инструменты `mcp-features`, Respond to Webhook вернул ответ по контракту спеки.
+
+### Правки после импорта (минимальные)
+
+- **MCP Client нода заменена** на ноду со Streamable MCP transport — дефолтная из JSON не стартовала против `mcp-features` (HTTP/Streamable), пришлось переключить на корректный тип ноды; URL и Bearer Token перенесены как есть.
+- **LLM не gpt-4o-mini** (как в spec) — n8n автоматически подцепил уже настроенный в инстансе credential **Claude Sonnet 4.5** с собственным Anthropic API-токеном. Модель не менял, оставил подгруженную.
+
+### Сравнение с ручной сборкой (`wf1-manual-trigger.json`)
+
+Оба JSON импортируются и работают. Различия:
+- ручной — Switch-нода для валидации, Claude Sonnet 4.6, Structured Output Parser;
+- агентный — IF-нода (бинарная валидация по spec), Claude Sonnet 4.5 (auto-loaded credential), Streamable MCP Client, унифицированный response через Set + Respond to Webhook.
+
+Оба варианта закрывают требования M5. Агентный путь демонстрирует воспроизводимость спеки без ручной кликни-таски в n8n UI — правок после импорта две и обе тривиальные.
